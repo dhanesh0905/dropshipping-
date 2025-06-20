@@ -3,17 +3,10 @@ import requests
 from io import BytesIO
 from PIL import Image
 
-# ======================================
-#  APP CONFIG
-# ======================================
+# App Configuration
 st.set_page_config(page_title="AnimeStyle Dropship", page_icon="🌸", layout="wide")
-ITEMS_PER_PAGE = 8
-SHIPPING_THRESHOLD = 100
-TAX_RATE = 0.08
+ITEMS_PER_PAGE, SHIPPING_THRESHOLD, TAX_RATE = 8, 100, 0.08
 
-# ======================================
-#  PRODUCT DATA
-# ======================================
 products = {
     "men": [
         {
@@ -93,40 +86,25 @@ products = {
     ]
 }
 
-
-# ======================================
-#  UTILITIES
-# ======================================
+# Utilities
 @st.cache_data(show_spinner=False)
 def load_image(url):
-    try:
-        return Image.open(BytesIO(requests.get(url, timeout=5).content))
-    except Exception:
-        return None
+    try: return Image.open(BytesIO(requests.get(url, timeout=5).content))
+    except: return None
 
 def init_session():
-    defaults = {
-        'cart': [], 'current_page': "🏠 Home", 
-        'product_page': 0, 'checkout_step': 0
-    }
-    for k, v in defaults.items():
-        if k not in st.session_state: st.session_state[k] = v
+    defaults = {'cart': [], 'current_page': "🏠 Home", 'product_page': 0, 'checkout_step': 0}
+    for k, v in defaults.items(): st.session_state.setdefault(k, v)
 
-def add_to_cart(product):
-    cart = st.session_state.cart
-    existing = next((i for i in cart if i["id"] == product["id"]), None)
-    if existing: 
-        existing["quantity"] += 1
-    else:
-        cart.append({**product, "quantity": 1})
-    st.success(f"Added {product['name']} to cart!")
-
-def remove_from_cart(product_id):
-    st.session_state.cart = [i for i in st.session_state.cart if i['id'] != product_id]
-
-def clear_cart():
-    st.session_state.cart = []
-    st.session_state.checkout_step = -1
+def cart_action(product, action="add"):
+    if action == "add":
+        if existing := next((i for i in st.session_state.cart if i["id"] == product["id"]), None):
+            existing["quantity"] += 1
+        else:
+            st.session_state.cart.append({**product, "quantity": 1})
+        st.success(f"Added {product['name']} to cart!")
+    else: 
+        st.session_state.cart = [i for i in st.session_state.cart if i['id'] != product]
 
 def calculate_order():
     cart = st.session_state.cart
@@ -135,39 +113,26 @@ def calculate_order():
     tax = total * TAX_RATE
     return total, shipping, tax, total + shipping + tax
 
-# ======================================
-#  COMPONENTS
-# ======================================
+# Components
 def product_card(product):
     with st.container():
-        if img := load_image(product["image"]):
-            st.image(img, use_container_width=True)
-        
+        if img := load_image(product["image"]): st.image(img, use_container_width=True)
         st.subheader(product["name"])
         st.markdown(f"**${product['price']}**")
         st.caption(product["description"])
-        
-        tags = " ".join([f"<span style='background:#ff4b4b;color:white;padding:2px 8px;border-radius:12px;margin:4px;'>{t}</span>" 
-                         for t in product["tags"]])
-        st.markdown(tags, unsafe_allow_html=True)
-        
+        st.caption(" ".join(f"`{tag}`" for tag in product["tags"]))
         st.markdown(f"[🔍 Product Details]({product['source']})")
-        
         if st.button("🛒 Add to Cart", key=f"add_{product['id']}", use_container_width=True):
-            add_to_cart(product)
+            cart_action(product)
 
 def render_products(products, title):
     st.header(title)
-    num_pages = max(1, (len(products) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
-    page = st.session_state.product_page
+    page, num_pages = st.session_state.product_page, max(1, (len(products) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
     
-    # Display products
     cols = st.columns(4)
     for i, p in enumerate(products[page*ITEMS_PER_PAGE: (page+1)*ITEMS_PER_PAGE]):
-        with cols[i % 4]: 
-            product_card(p)
+        with cols[i % 4]: product_card(p)
     
-    # Pagination
     if num_pages > 1:
         col1, col2, _ = st.columns([1, 1, 6])
         if page > 0 and col1.button("← Previous", use_container_width=True):
@@ -180,20 +145,18 @@ def render_products(products, title):
 def cart_item(item):
     col1, col2 = st.columns([1, 3])
     with col1:
-        if img := load_image(item["image"]): 
-            st.image(img, width=100)
+        if img := load_image(item["image"]): st.image(img, width=100)
     with col2:
         st.subheader(item["name"])
         st.markdown(f"**Price:** ${item['price']} | **Qty:** {item['quantity']}")
         st.markdown(f"**Subtotal:** ${item['price'] * item['quantity']:.2f}")
         if st.button("🗑️ Remove", key=f"remove_{item['id']}"):
-            remove_from_cart(item['id'])
+            cart_action(item['id'], "remove")
             st.rerun()
     st.divider()
 
 def checkout_form():
     step = st.session_state.checkout_step
-    
     with st.form(f"checkout_step_{step}"):
         if step == 0:  # Shipping
             st.header("📦 Shipping Information")
@@ -201,17 +164,12 @@ def checkout_form():
             email = st.text_input("Email", key="email")
             address = st.text_area("Shipping Address", key="address")
             city, state = st.columns(2)
-            city = city.text_input("City", key="city")
-            state = state.text_input("State/Province", key="state")
+            city, state = city.text_input("City", key="city"), state.text_input("State/Province", key="state")
             zip_code, country = st.columns(2)
-            zip_code = zip_code.text_input("ZIP/Postal Code", key="zip")
-            country = country.selectbox("Country", ["USA", "Japan", "Canada", "UK", "Australia"])
+            zip_code, country = zip_code.text_input("ZIP/Postal Code", key="zip"), country.selectbox("Country", ["USA", "Japan", "Canada", "UK", "Australia"])
             
             if st.form_submit_button("Continue to Payment", use_container_width=True):
-                st.session_state.shipping_info = {
-                    "name": name, "email": email, "address": address,
-                    "city": city, "state": state, "zip": zip_code, "country": country
-                }
+                st.session_state.shipping_info = locals()
                 st.session_state.checkout_step = 1
                 st.rerun()
                 
@@ -220,7 +178,6 @@ def checkout_form():
             ship = st.session_state.shipping_info
             st.subheader("Shipping to:")
             st.markdown(f"{ship['address']}, {ship['city']}, {ship['state']} {ship['zip']}, {ship['country']}")
-            
             payment = st.radio("Payment Method", ["Credit Card", "PayPal", "Google Pay"])
             
             if payment == "Credit Card":
@@ -236,16 +193,14 @@ def checkout_form():
         elif step == 2:  # Review
             st.header("✅ Order Confirmation")
             st.success("Almost done! Review your order:")
-            
             ship = st.session_state.shipping_info
             st.subheader("Shipping Information:")
             st.markdown(f"**Name:** {ship['name']} | **Email:** {ship['email']}")  
             st.markdown(f"**Address:** {ship['address']}")  
             st.markdown(f"**City:** {ship['city']} | **State:** {ship['state']} | **ZIP:** {ship['zip']} | **Country:** {ship['country']}")  
             
-            # Order summary
-            st.subheader("Order Summary")
             total, shipping, tax, grand_total = calculate_order()
+            st.subheader("Order Summary")
             st.markdown(f"**Subtotal:** ${total:.2f}")
             st.markdown(f"**Shipping:** {'FREE 🎉' if shipping == 0 else f'${shipping:.2f}'}")
             st.markdown(f"**Tax:** ${tax:.2f}")
@@ -261,33 +216,23 @@ def checkout_form():
         st.session_state.checkout_step = max(0, step - 1)
         st.rerun()
 
-# ======================================
-#  PAGES
-# ======================================
+# Pages
 def home_page():
     st.title("🎌 AnimeStyle Dropship")
     st.subheader("Authentic Japanese Anime Merchandise Shipped Worldwide")
     st.image("https://images.unsplash.com/photo-1633327941347-6cea0bdce44d?auto=format&fit=crop&w=1200&h=400", 
              use_container_width=True, caption="Shop exclusive anime merchandise")
     
-    # Category selection
-    category = st.radio("Shop By Category", ["All", "Men's", "Women's"], 
-                        horizontal=True, label_visibility="collapsed")
+    category = st.radio("Shop By Category", ["All", "Men's", "Women's"], horizontal=True, label_visibility="collapsed")
     st.divider()
     
-    # Show products
-    if category == "All": 
-        render_products(products["men"] + products["women"], "🔥 All Collections")
-    elif category == "Men's": 
-        render_products(products["men"], "👕 Men's Collection")
-    else: 
-        render_products(products["women"], "👚 Women's Collection")
+    if category == "All": render_products(products["men"] + products["women"], "🔥 All Collections")
+    elif category == "Men's": render_products(products["men"], "👕 Men's Collection")
+    else: render_products(products["women"], "👚 Women's Collection")
     
-    # Benefits
     st.divider()
     st.header("✨ Premium Benefits")
-    cols = st.columns(4)
-    for col, (icon, title, desc) in zip(cols, [
+    for col, (icon, title, desc) in zip(st.columns(4), [
         ("🚚", "Fast Shipping", "From Tokyo in 24h"),
         ("✅", "Authentic", "Official merchandise"),
         ("🔄", "Easy Returns", "30-day policy"),
@@ -296,46 +241,39 @@ def home_page():
         col.subheader(f"{icon} {title}")
         col.caption(desc)
     
-    # Footer
     st.divider()
     st.markdown("""
-    <div style="text-align:center;padding:20px;background:#f0f2f6;border-radius:10px;">
-        <h4>🏢 About AnimeStyle</h4>
-        <p>Authentic merchandise direct from Japan</p>
-        <p>📞 support@animestyledropship.com | +81 3-1234-5678</p>
-        <p>🌐 
-            <a href="https://instagram.com/animestyle_dropship">Instagram</a> | 
-            <a href="https://twitter.com/animestyle_ds">Twitter</a> | 
-            <a href="https://facebook.com/animestyledropship">Facebook</a>
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    **🏢 About AnimeStyle**  
+    Authentic merchandise direct from Japan  
+    **📞 Contact:** support@animestyledropship.com | +81 3-1234-5678  
+    **🌐 Connect:**  
+    [Instagram](https://instagram.com/animestyle_dropship) | 
+    [Twitter](https://twitter.com/animestyle_ds) | 
+    [Facebook](https://facebook.com/animestyledropship)
+    """)
 
 def requirements_page():
     st.title("📋 System Requirements")
-    with st.expander("Customer Experience", expanded=True):
-        st.markdown("""
+    for title, content in [
+        ("Customer Experience", """
         - **Product Discovery**: Browse by category, search, filters
         - **Shopping Cart**: Add/remove items, real-time calculations
         - **Checkout**: Multi-step with multiple payment options
-        - **Order Management**: Confirmation, tracking, returns
-        """)
-    
-    with st.expander("Store Management", expanded=True):
-        st.markdown("""
+        - **Order Management**: Confirmation, tracking, returns"""),
+        
+        ("Store Management", """
         - **Inventory**: Real-time tracking, low stock alerts
         - **Order Processing**: Dashboard, status workflow
         - **Product Management**: Add/edit/archive products
-        - **Analytics**: Sales performance, customer metrics
-        """)
-    
-    with st.expander("Technical Specs", expanded=True):
-        st.markdown("""
+        - **Analytics**: Sales performance, customer metrics"""),
+        
+        ("Technical Specs", """
         - **Frontend**: Streamlit-based responsive UI
         - **Backend**: Python microservices, PostgreSQL
         - **Integrations**: Payment gateways, shipping carriers
-        - **Security**: PCI-DSS compliance, GDPR handling
-        """)
+        - **Security**: PCI-DSS compliance, GDPR handling""")
+    ]:
+        with st.expander(title, expanded=True): st.markdown(content)
 
 def cart_page():
     st.title("🛒 Your Shopping Cart")
@@ -347,11 +285,10 @@ def cart_page():
         st.button("Continue Shopping", use_container_width=True,
                  on_click=lambda: st.session_state.update({"current_page": "🏠 Home"}))
     else:
-        for item in st.session_state.cart:
-            cart_item(item)
+        for item in st.session_state.cart: cart_item(item)
         
-        st.subheader("Order Summary")
         total, shipping, tax, grand_total = calculate_order()
+        st.subheader("Order Summary")
         st.markdown(f"**Subtotal:** ${total:.2f}")
         st.markdown(f"**Shipping:** {'FREE 🎉' if shipping == 0 else f'${shipping:.2f}'}")
         st.markdown(f"**Tax:** ${tax:.2f}")
@@ -374,46 +311,29 @@ def cart_page():
                 st.image("https://images.unsplash.com/photo-1594179047519-f347310d3322?auto=format&fit=crop&w=600&h=300", 
                          use_container_width=True)
                 st.button("Continue Shopping", use_container_width=True,
-                         on_click=lambda: [clear_cart(), st.session_state.update({"current_page": "🏠 Home"})])
+                         on_click=lambda: [st.session_state.update({'cart': [], 'checkout_step': -1}), 
+                                          st.session_state.update({"current_page": "🏠 Home"})])
 
-# ======================================
-#  MAIN APP
-# ======================================
+# Main App
 def main():
-    # Apply styling
-    st.markdown("""
-    <style>
-        .stButton>button { transition: transform 0.3s; }
-        .stButton>button:hover { transform: scale(1.02); }
-        .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 { color: #ff4b4b; }
-        [data-testid="stExpander"] { background: #f9f9f9; border-radius: 10px; }
-        div[data-testid="column"] { padding: 10px; }
-    </style>
-    """, unsafe_allow_html=True)
-    
     init_session()
-    
-    # Sidebar
     with st.sidebar:
         st.title("🌸 AnimeStyle")
-        page = st.radio("Navigation", ["🏠 Home", "📋 Requirements", "🛒 Cart"], 
+        st.session_state.current_page = st.radio("Navigation", ["🏠 Home", "📋 Requirements", "🛒 Cart"], 
                         index=["🏠 Home", "📋 Requirements", "🛒 Cart"].index(st.session_state.current_page))
-        st.session_state.current_page = page
         
-        # Cart summary
         if st.session_state.cart:
             st.divider()
             st.subheader("Cart Summary")
             total_items = sum(i['quantity'] for i in st.session_state.cart)
             st.caption(f"{total_items} item{'s' if total_items > 1 else ''}")
-            total, _, _, grand_total = calculate_order()
+            _, _, _, grand_total = calculate_order()
             st.markdown(f"**Total:** ${grand_total:.2f}")
             st.button("View Cart", on_click=lambda: st.session_state.update({"current_page": "🛒 Cart"}))
     
-    # Page routing
-    if page == "🏠 Home": home_page()
-    elif page == "📋 Requirements": requirements_page()
-    elif page == "🛒 Cart": cart_page()
+    if st.session_state.current_page == "🏠 Home": home_page()
+    elif st.session_state.current_page == "📋 Requirements": requirements_page()
+    else: cart_page()
 
 if __name__ == "__main__":
     main()
