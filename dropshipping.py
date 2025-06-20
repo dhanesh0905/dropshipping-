@@ -239,3 +239,76 @@ elif gender_category == "Men's Collection":
 elif gender_category == "Women's Collection":
     st.subheader("👚 Women's Anime Collection")
     display_products(products["women"])
+
+# Requirements section
+st.markdown("---")
+st.subheader("🚀 System Requirements Documentation")
+
+with st.expander("Requirements Specification (Click to Expand)"):
+    st.markdown("""
+    ### Persona 1: Customer (Anime Fan)
+    
+    **Functional Requirements:**
+    1. **Product Discovery**  
+       - Browse anime merchandise by gender categories (Men's/Women's)  
+       - *Implementation: Category radio buttons in sidebar*
+       
+    2. **Visual Product Inspection**  
+       - View high-quality product images with detailed descriptions  
+       - *Implementation: Online-hosted images with descriptive captions*
+       
+    3. **Shopping Cart Management**  
+       - Add/remove items, adjust quantities, view totals  
+       - *Implementation: Session-based cart with real-time updates*
+       
+    4. **Purchase Completion**  
+       - Simple checkout process  
+       - *Implementation: One-click checkout button*
+       
+    5. **Product Sourcing**  
+       - Access original product links  
+       - *Implementation: 'Product Details' links for each item*
+    
+    **Non-Functional Requirements:**
+    1. **Performance**  
+       - <1s product loading time  
+       - *Implementation: Optimized image loading and session caching*
+       
+    2. **Usability**  
+       - Intuitive navigation for anime fans of all ages  
+       - *Implementation: Clear category labels and visual feedback*
+
+    ---
+    
+    ### Persona 2: Store Owner (Admin)
+    
+    **Functional Requirements:**
+    1. **Inventory Management**  
+       - Add/update product listings  
+       - *Implementation: Centralized product database structure*
+       
+    2. **Order Processing**  
+       - View and fulfill customer orders  
+       - *Implementation: Cart data structure with quantity tracking*
+       
+    3. **Category Management**  
+       - Organize products by gender categories  
+       - *Implementation: Gender-based product classification*
+       
+    4. **Product Sourcing Integration**  
+       - Maintain supplier links  
+       - *Implementation: 'source' field in product database*
+       
+    5. **Sales Analytics**  
+       - Track popular products  
+       - *Implementation: Cart data available for analysis*
+    
+    **Non-Functional Requirements:**
+    1. **Maintainability**  
+       - Easy product database updates  
+       - *Implementation: Simple Python dictionary structure*
+       
+    2. **Scalability**  
+       - Support 100+ products  
+       - *Implementation: Modular product display system*
+    """)
