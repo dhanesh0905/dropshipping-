@@ -331,9 +331,17 @@ with st.expander("Requirements Specification (Click to Expand)"):
 # Footer
 st.markdown("---")
 st.markdown("""
-**About AnimeStyle Dropship**  
-We partner directly with Japanese manufacturers to bring you authentic anime merchandise at affordable prices. 
-All products ship directly from our Tokyo warehouse with worldwide shipping.
+**🏢 About AnimeStyle Dropship**  
+We partner directly with Japanese manufacturers and licensors to bring you authentic anime merchandise. 
+All products are officially licensed and ship directly from our distribution center in Tokyo, Japan.
 
-*Note: This is a demo site. Product links are placeholders.*
+**📞 Customer Support**  
+Email: support@animestyledropship.com  
+Phone: +81 3-1234-5678  
+Business Hours: Mon-Fri 9AM-6PM JST
+
+**🌐 Connect With Us**  
+[Instagram](https://instagram.com/animestyle_dropship) | [Twitter](https://twitter.com/animestyle_ds) | [Facebook](https://facebook.com/animestyledropship)
+
+*Prices in USD. All trademarks are property of their respective owners.*
 """)
