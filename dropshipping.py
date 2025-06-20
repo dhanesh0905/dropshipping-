@@ -245,6 +245,16 @@ elif gender_category == "Women's Collection":
     st.subheader("👚 Women's Anime Collection")
     display_products(products["women"])
 
+# Promotional banner
+st.markdown("---")
+st.subheader("✨ Premium Shipping & Guarantee")
+st.markdown("""
+- **Fast Worldwide Shipping**: All orders ship from our Tokyo warehouse within 24 hours
+- **Authenticity Guaranteed**: Official licensed merchandise with hologram seals
+- **Easy Returns**: 30-day no-questions-asked return policy
+- **Secure Payments**: SSL encrypted transactions with multiple payment options
+""")
+
 # Requirements section
 st.markdown("---")
 st.subheader("🚀 System Requirements Documentation")
