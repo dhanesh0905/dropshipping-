@@ -11,84 +11,84 @@ import threading
 # ===== BACKEND SERVICE =====
 class BackendService:
     def __init__(self):
-     products = {
-    "men": [
-        {
-            "id": 101,
-            "name": "Naruto Akatsuki Cloud Hoodie",
-            "price": 49.99,
-            "description": "Officially licensed black hoodie with red cloud pattern",
-            "tags": ["Naruto", "Hoodie", "Popular"],
-            "image": "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw1f373bf1/Apparel/KWM257PNAR%20-%20Naruto%20Shippuden%20-%20Akatsuki%20Cloud%20Cardigan/bioworld-hoodies-outerwear-naruto-shippuden-akatsuki-cloud-cardigan-31788842123308%20(1).jpg",
-            "source": "https://store.crunchyroll.com/products/naruto-shippuden-akatsuki-cloud-cardigan-KWM257PNAR.html"
-        },
-        {
-            "id": 102,
-            "name": "One Piece Straw Hat Pirates T-Shirt",
-            "price": 29.99,
-            "description": "Premium cotton t-shirt with Jolly Roger emblem",
-            "tags": ["One Piece", "T-Shirt", "Cotton"],
-            "image": "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dwad8fb8d2/Apparel/OPNS2737/ripple-junction-unisex-t-shirts-one-piece-straw-hat-crew-laughs-crunchyroll-exclusive-31651028336684.jpg",
-            "source": "https://store.crunchyroll.com/products/one-piece-straw-hat-crew-laughs-t-shirt-crunchyroll-exclusive-OPNS2737.html"
-        },
-        {
-            "id": 103,
-            "name": "Dragon Ball Z Goku Gi Jacket",
-            "price": 59.99,
-            "description": "Orange windbreaker with Turtle School insignia",
-            "tags": ["DBZ", "Jacket", "Goku"],
-            "image": "https://store.crunchyroll.com/dw/image/v2/BDGC_PRD/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw9d87bce5/images/HDA2GUHDBZ_dragon-ball-z-goku-full-zip-hoodie_5.jpg?sw=300&sh=300&sm=fit",
-            "source": "https://store.crunchyroll.com/products/dragon-ball-z-goku-full-zip-hoodie-HDA2GUHDBZ.html"
-        },
-        {
-            "id": 104,
-            "name": "Attack on Titan Survey Corps Jacket",
-            "price": 69.99,
-            "description": "Military-style jacket with Wings of Freedom emblem",
-            "tags": ["AOT", "Jacket", "Scout"],
-            "image": "https://store.crunchyroll.com/dw/image/v2/BDGC_PRD/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dwd6f334b8/Apparel/CBXAOTSG05/CBXAOT-SG-05.jpg?sw=300&sh=300&sm=fit",
-            "source": "https://store.crunchyroll.com/products/attack-on-titan-x-color-bars-loaded-logo-hoodie-CBXAOTSG05.html"
+        self.products = {
+            "men": [
+                {
+                    "id": 101,
+                    "name": "Naruto Akatsuki Cloud Hoodie",
+                    "price": 49.99,
+                    "description": "Officially licensed black hoodie with red cloud pattern",
+                    "tags": ["Naruto", "Hoodie", "Popular"],
+                    "image": "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw1f373bf1/Apparel/KWM257PNAR%20-%20Naruto%20Shippuden%20-%20Akatsuki%20Cloud%20Cardigan/bioworld-hoodies-outerwear-naruto-shippuden-akatsuki-cloud-cardigan-31788842123308%20(1).jpg",
+                    "source": "https://store.crunchyroll.com/products/naruto-shippuden-akatsuki-cloud-cardigan-KWM257PNAR.html"
+                },
+                {
+                    "id": 102,
+                    "name": "One Piece Straw Hat Pirates T-Shirt",
+                    "price": 29.99,
+                    "description": "Premium cotton t-shirt with Jolly Roger emblem",
+                    "tags": ["One Piece", "T-Shirt", "Cotton"],
+                    "image": "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dwad8fb8d2/Apparel/OPNS2737/ripple-junction-unisex-t-shirts-one-piece-straw-hat-crew-laughs-crunchyroll-exclusive-31651028336684.jpg",
+                    "source": "https://store.crunchyroll.com/products/one-piece-straw-hat-crew-laughs-t-shirt-crunchyroll-exclusive-OPNS2737.html"
+                },
+                {
+                    "id": 103,
+                    "name": "Dragon Ball Z Goku Gi Jacket",
+                    "price": 59.99,
+                    "description": "Orange windbreaker with Turtle School insignia",
+                    "tags": ["DBZ", "Jacket", "Goku"],
+                    "image": "https://store.crunchyroll.com/dw/image/v2/BDGC_PRD/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw9d87bce5/images/HDA2GUHDBZ_dragon-ball-z-goku-full-zip-hoodie_5.jpg?sw=300&sh=300&sm=fit",
+                    "source": "https://store.crunchyroll.com/products/dragon-ball-z-goku-full-zip-hoodie-HDA2GUHDBZ.html"
+                },
+                {
+                    "id": 104,
+                    "name": "Attack on Titan Survey Corps Jacket",
+                    "price": 69.99,
+                    "description": "Military-style jacket with Wings of Freedom emblem",
+                    "tags": ["AOT", "Jacket", "Scout"],
+                    "image": "https://store.crunchyroll.com/dw/image/v2/BDGC_PRD/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dwd6f334b8/Apparel/CBXAOTSG05/CBXAOT-SG-05.jpg?sw=300&sh=300&sm=fit",
+                    "source": "https://store.crunchyroll.com/products/attack-on-titan-x-color-bars-loaded-logo-hoodie-CBXAOTSG05.html"
+                }
+            ],
+            "women": [
+                {
+                    "id": 201,
+                    "name": "Sailor Moon Transformation Brooch Set",
+                    "price": 89.99,
+                    "description": "Authentic replica brooches with display case",
+                    "tags": ["Sailor Moon", "Jewelry", "Collectible"],
+                    "image": "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw36e3c868/rightstuf/782009243960_anime-sailor-moon-crystal-1-limited-edition-gwp-primary.jpg",
+                    "source": "https://store.crunchyroll.com/products/sailor-moon-crystal-set-1-limited-edition-blu-raydvd-782009243960.html"
+                },
+                {
+                    "id": 202,
+                    "name": "My Hero Academia UA Track Jacket",
+                    "price": 54.99,
+                    "description": "Athletic jacket with UA High School logo",
+                    "tags": ["MHA", "Jacket", "Sportswear"],
+                    "image": "https://cdn.animebape.com/wp-content/uploads/2023/04/school-uniform-my-hero-academia-casual-bomber-jacket-96cvn.jpg",
+                    "source": "https://animebape.com/products/anime-school-uniform-my-hero-academia-casual-bomber-jacket-2/"
+                },
+                {
+                    "id": 203,
+                    "name": "Demon Slayer Nezuko Kimono Robe",
+                    "price": 74.99,
+                    "description": "Silk blend kimono with floral pattern",
+                    "tags": ["Kimetsu", "Robe", "Loungewear"],
+                    "image": "https://img.fruugo.com/product/5/97/1692850975_0340_0340.jpg",
+                    "source": "https://www.fruugo.de/erwachsene-kind-damon-slayer-cosplay-kimono-haori-anime-kimetsu-no-yaiba-kamado-nezuko-kochou-shinobu-cosplay-kostum-sommer-mantel/p-237632505-509301387"
+                },
+                {
+                    "id": 204,
+                    "name": "Jujutsu Kaisen Sukuna Fingercaps",
+                    "price": 39.99,
+                    "description": "Resin fingercaps with intricate details",
+                    "tags": ["JJK", "Accessory", "Cosplay"],
+                    "image": "https://cdn.animebape.com/wp-content/uploads/2024/09/sukuna-jujutsu-kaisen-custom-unisex-leggings-spats-training-tight-27bx3.jpg",
+                    "source": "https://animebape.com/products/anime-sukuna-jujutsu-kaisen-custom-unisex-leggings-spats-training-tight/"
+                }
+            ]
         }
-    ],
-    "women": [
-        {
-            "id": 201,
-            "name": "Sailor Moon Transformation Brooch Set",
-            "price": 89.99,
-            "description": "Authentic replica brooches with display case",
-            "tags": ["Sailor Moon", "Jewelry", "Collectible"],
-            "image": "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw36e3c868/rightstuf/782009243960_anime-sailor-moon-crystal-1-limited-edition-gwp-primary.jpg",
-            "source": "https://store.crunchyroll.com/products/sailor-moon-crystal-set-1-limited-edition-blu-raydvd-782009243960.html"
-        },
-        {
-            "id": 202,
-            "name": "My Hero Academia UA Track Jacket",
-            "price": 54.99,
-            "description": "Athletic jacket with UA High School logo",
-            "tags": ["MHA", "Jacket", "Sportswear"],
-            "image": "https://cdn.animebape.com/wp-content/uploads/2023/04/school-uniform-my-hero-academia-casual-bomber-jacket-96cvn.jpg",
-            "source": "https://animebape.com/products/anime-school-uniform-my-hero-academia-casual-bomber-jacket-2/"
-        },
-        {
-            "id": 203,
-            "name": "Demon Slayer Nezuko Kimono Robe",
-            "price": 74.99,
-            "description": "Silk blend kimono with floral pattern",
-            "tags": ["Kimetsu", "Robe", "Loungewear"],
-            "image": "https://img.fruugo.com/product/5/97/1692850975_0340_0340.jpg",
-            "source": "https://www.fruugo.de/erwachsene-kind-damon-slayer-cosplay-kimono-haori-anime-kimetsu-no-yaiba-kamado-nezuko-kochou-shinobu-cosplay-kostum-sommer-mantel/p-237632505-509301387"
-        },
-        {
-            "id": 204,
-            "name": "Jujutsu Kaisen Sukuna Fingercaps",
-            "price": 39.99,
-            "description": "Resin fingercaps with intricate details",
-            "tags": ["JJK", "Accessory", "Cosplay"],
-            "image": "https://cdn.animebape.com/wp-content/uploads/2024/09/sukuna-jujutsu-kaisen-custom-unisex-leggings-spats-training-tight-27bx3.jpg",
-            "source": "https://animebape.com/products/anime-sukuna-jujutsu-kaisen-custom-unisex-leggings-spats-training-tight/"
-        }
-    ]
-}
     
     def get_products(self):
         """Get all products"""
@@ -132,15 +132,20 @@ class AnimeStyleApp:
     def load_images_async(self):
         """Load product images in background thread"""
         def load_task():
-            for cat in self.backend.products.values():
+            products = self.backend.get_products()
+            for cat in products.values():
                 for product in cat:
                     try:
                         response = requests.get(product["image"], timeout=5)
+                        response.raise_for_status()
                         img = Image.open(BytesIO(response.content))
                         img = img.resize((150, 150), Image.LANCZOS)
                         self.product_images[product["id"]] = ImageTk.PhotoImage(img)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        print(f"Error loading image: {e}")
+                        # Create placeholder image
+                        placeholder = Image.new('RGB', (150, 150), color='#e0e0e0')
+                        self.product_images[product["id"]] = ImageTk.PhotoImage(placeholder)
             self.show_products()
         
         threading.Thread(target=load_task, daemon=True).start()
@@ -231,6 +236,11 @@ class AnimeStyleApp:
             img = self.product_images.get(product["id"])
             if img:
                 tk.Label(frame, image=img, bg="white").pack()
+            else:
+                # Show placeholder if image not loaded yet
+                placeholder = tk.Label(frame, text="Image Loading...", 
+                                      bg="white", width=20, height=8)
+                placeholder.pack()
             
             # Product info
             tk.Label(frame, text=product["name"], 
