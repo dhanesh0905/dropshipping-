@@ -312,7 +312,7 @@ elif page == "🛒 Cart":
     if not st.session_state.cart:
         st.info("Your cart is empty. Browse our collections to add items!")
         # Using a placeholder image from a URL
-        st.image("https://cdn.dribbble.com/users/5107895/screenshots/14532312/media/a7e6c2e9333d0989e3a54c95dd8321d7.jpg", 
+        st.image("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTuRgH3NfwZOtkZ0zW6R1fUIZbibYkMbe3fgw&s", 
                  caption="Find amazing anime merchandise!", 
                  use_container_width=True)
         if st.button("Continue Shopping"):
