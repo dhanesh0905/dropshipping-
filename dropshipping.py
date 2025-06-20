@@ -312,3 +312,13 @@ with st.expander("Requirements Specification (Click to Expand)"):
        - Support 100+ products  
        - *Implementation: Modular product display system*
     """)
+
+# Footer
+st.markdown("---")
+st.markdown("""
+**About AnimeStyle Dropship**  
+We partner directly with Japanese manufacturers to bring you authentic anime merchandise at affordable prices. 
+All products ship directly from our Tokyo warehouse with worldwide shipping.
+
+*Note: This is a demo site. Product links are placeholders.*
+""")
