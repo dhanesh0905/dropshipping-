@@ -1,7 +1,5 @@
 import streamlit as st
 import pandas as pd
-import random
-
 
 # Configure page
 st.set_page_config(
@@ -165,11 +163,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Header section
-st.title("ANIMESTYLE DROPSHIP")
-st.subheader("Official Merchandise from Your Favorite Anime Series")
+st.title("🎌 AnimeStyle Dropship")
+st.subheader("Authentic Japanese Anime Merchandise Shipped Worldwide")
 
 # Navigation
-st.sidebar.title("Navigation")
+st.sidebar.title("🏷️ Navigation")
 gender_category = st.sidebar.radio("Shop By Category", ["All", "Men's Collection", "Women's Collection"])
 st.sidebar.markdown("---")
 
@@ -180,13 +178,20 @@ for item in st.session_state.cart:
     
 if st.session_state.cart:
     total = sum(item['price'] * item['quantity'] for item in st.session_state.cart)
-    st.sidebar.markdown(f"**Total: ${total:.2f}**")
-    if st.sidebar.button("Proceed to Checkout"):
+    shipping = 9.99 if total < 100 else 0
+    tax = total * 0.08
+    grand_total = total + shipping + tax
+    
+    st.sidebar.markdown(f"**Subtotal: ${total:.2f}**")
+    st.sidebar.markdown(f"Shipping: ${shipping:.2f}")
+    st.sidebar.markdown(f"Tax: ${tax:.2f}")
+    st.sidebar.markdown(f"**Grand Total: ${grand_total:.2f}**")
+    
+    if st.sidebar.button("💳 Proceed to Checkout"):
         st.session_state.cart = []
-        st.sidebar.success("Order placed successfully! Your anime gear is on the way!")
+        st.sidebar.success("Order placed successfully! Your anime gear will ship from Tokyo within 3-5 business days!")
 else:
     st.sidebar.info("Your cart is empty. Add some anime swag!")
-
 
 # Product display
 def display_products(product_list):
@@ -194,7 +199,7 @@ def display_products(product_list):
     for idx, product in enumerate(product_list):
         with cols[idx % 4]:
             with st.container():
-                # Product image
+                # Product image with actual parameters
                 st.image(
                     product["image"],
                     width=300,
@@ -212,10 +217,10 @@ def display_products(product_list):
                 st.caption(tag_str)
                 
                 # Source link
-                st.markdown(f"[Product Details →]({product['source']})")
+                st.markdown(f"[🔍 Product Details →]({product['source']})")
                 
                 # Add to cart button
-                if st.button("Add to Cart", key=product["id"]):
+                if st.button("🛒 Add to Cart", key=product["id"]):
                     existing = next((item for item in st.session_state.cart if item["id"] == product["id"]), None)
                     if existing:
                         existing["quantity"] += 1
