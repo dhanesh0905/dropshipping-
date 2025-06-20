@@ -165,5 +165,24 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Header section
-st.markdown('<h1 class="header">ANIMESTYLE DROPSHIP</h1>', unsafe_allow_html=True)
-st.markdown('<p class="subheader">Official Merchandise from Your Favorite Anime Series</p>', unsafe_allow_html=True)
+st.title("ANIMESTYLE DROPSHIP")
+st.subheader("Official Merchandise from Your Favorite Anime Series")
+
+# Navigation
+st.sidebar.title("Navigation")
+gender_category = st.sidebar.radio("Shop By Category", ["All", "Men's Collection", "Women's Collection"])
+st.sidebar.markdown("---")
+
+# Cart display in sidebar
+st.sidebar.title("🛒 Your Cart")
+for item in st.session_state.cart:
+    st.sidebar.markdown(f"**{item['name']}** - ${item['price']} (Qty: {item['quantity']})")
+    
+if st.session_state.cart:
+    total = sum(item['price'] * item['quantity'] for item in st.session_state.cart)
+    st.sidebar.markdown(f"**Total: ${total:.2f}**")
+    if st.sidebar.button("Proceed to Checkout"):
+        st.session_state.cart = []
+        st.sidebar.success("Order placed successfully! Your anime gear is on the way!")
+else:
+    st.sidebar.info("Your cart is empty. Add some anime swag!")
