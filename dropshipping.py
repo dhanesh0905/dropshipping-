@@ -1,23 +1,15 @@
-import streamlit as st
+import tkinter as tk
+from tkinter import ttk, messagebox
+from PIL import Image, ImageTk
 import requests
 from io import BytesIO
-from PIL import Image
+import uuid
+import webbrowser
+from flask import Flask, jsonify
 
-# ======================================
-#  APP CONFIGURATION
-# ======================================
-st.set_page_config(
-    page_title="AnimeStyle Dropship",
-    page_icon="🌸",
-    layout="wide"
-)
-ITEMS_PER_PAGE = 8
-SHIPPING_THRESHOLD = 100
-TAX_RATE = 0.08
+# ===== FLASK BACKEND =====
+app = Flask(__name__)
 
-# ======================================
-#  PRODUCT DATA
-# ======================================
 products = {
     "men": [
         {
@@ -97,347 +89,253 @@ products = {
     ]
 }
 
-# ======================================
-#  STAKEHOLDERS & REQUIREMENTS
-# ======================================
-def show_requirements():
-    """Display stakeholder requirements and system specifications"""
-    st.title("📋 System Requirements")
-    st.subheader("Stakeholder Analysis & Functional Specifications")
-    
-    # Store Manager requirements
-    with st.expander("👨‍💼 Store Manager (Inventory & Operations)", expanded=True):
-        st.markdown("""
-        **Functional Requirements:**
-        1. **Inventory Management** - Add/update/archive products in real-time  
-        2. **Order Processing** - View, fulfill, and track customer orders  
-        3. **Sales Analytics** - Generate revenue reports with date/category filters  
-        4. **Discount Management** - Create and apply promotional offers  
-        5. **Customer Insights** - View purchase history and preferences  
-        
-        **Non-Functional Requirements:**
-        1. **Performance** - Handle 1000+ concurrent users during sales events  
-        2. **Security** - PCI-DSS compliant payment processing  
-        """)
-    
-    # Customer requirements
-    with st.expander("👩 Customer (Shopping Experience)", expanded=True):
-        st.markdown("""
-        **Functional Requirements:**
-        1. **Personalized Recommendations** - AI-powered suggestions based on browsing  
-        2. **Wishlists** - Save items for later purchase  
-        3. **Order Tracking** - Real-time shipment status updates  
-        4. **Easy Returns** - Self-service return initiation  
-        5. **Multi-language** - Japanese/English interface toggle  
-        
-        **Non-Functional Requirements:**
-        1. **Usability** - Intuitive navigation with 90+ satisfaction score  
-        2. **Reliability** - 99.9% uptime with 24/7 availability  
-        """)
-    
-    # Content Moderator requirements
-    with st.expander("👮 Content Moderator (Compliance & Safety)"):
-        st.markdown("""
-        **Functional Requirements:**
-        1. **Content Review** - Approve/reject user-generated content  
-        2. **Compliance Monitoring** - Ensure legal/age-appropriate merchandise  
-        3. **Copyright Protection** - Detect and remove infringing listings  
-        4. **User Reporting** - Handle user reports of inappropriate content  
-        5. **Moderation Dashboard** - Centralized interface for review tasks  
-        
-        **Non-Functional Requirements:**
-        1. **Accuracy** - 95%+ precision in copyright detection  
-        2. **Response Time** - Resolve reports within 24 hours  
-        """)
-    
-    st.divider()
-    st.header("🔧 System Use Cases")
-    st.markdown("""
-    1. **Seasonal Collection Launch** - Manager adds new anime merchandise  
-    2. **Flash Sale Event** - Create time-limited discounts for premium members  
-    3. **Order Fulfillment** - Process and ship customer orders with tracking  
-    4. **Personalized Shopping** - Show tailored recommendations based on history  
-    5. **Wishlist Management** - Save and share favorite items with friends  
-    6. **Return Processing** - Handle product returns and issue refunds  
-    7. **Content Moderation** - Review and approve new product submissions  
-    8. **Multi-language Support** - Switch between Japanese/English interfaces  
-    """)
-    
-    st.divider()
-    st.header("⚙️ Technical Specifications")
-    cols = st.columns(3)
-    cols[0].markdown("**Frontend:**\n- Streamlit\n- React Components")
-    cols[1].markdown("**Backend:**\n- FastAPI\n- PostgreSQL")
-    cols[2].markdown("**Infrastructure:**\n- AWS EC2\n- Cloudflare CDN")
+@app.route('/products', methods=['GET'])
+def get_products():
+    """Return all products"""
+    return jsonify(products)
 
-# ======================================
-#  UTILITY FUNCTIONS
-# ======================================
-@st.cache_data(show_spinner=False)
-def load_image(url):
-    """Load and cache product images"""
-    try:
-        response = requests.get(url, timeout=5)
-        return Image.open(BytesIO(response.content))
-    except Exception:
-        return None
+@app.route('/order', methods=['POST'])
+def create_order():
+    """Create new order"""
+    return jsonify({
+        "order_id": f"ORD-{str(uuid.uuid4())[:8].upper()}",
+        "status": "Processing"
+    })
 
-def init_session():
-    """Initialize session state variables"""
-    if 'cart' not in st.session_state:
-        st.session_state.cart = []
-    if 'current_page' not in st.session_state:
-        st.session_state.current_page = "🏠 Home"
-    if 'product_page' not in st.session_state:
-        st.session_state.product_page = 0
-    if 'checkout_step' not in st.session_state:
-        st.session_state.checkout_step = 0
+def run_backend():
+    app.run(port=5000, threaded=True)
 
-def add_to_cart(product):
-    """Add product to shopping cart"""
-    for item in st.session_state.cart:
-        if item["id"] == product["id"]:
-            item["quantity"] += 1
-            st.success(f"Added another {product['name']} to cart!")
+# ===== TKINTER FRONTEND =====
+THEME_COLOR = "#6a0dad"
+ACCENT_COLOR = "#ff6b6b"
+BG_COLOR = "#f8f0ff"
+
+class AnimeStyleApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("🌸 AnimeStyle Dropship")
+        self.root.geometry("900x650")
+        self.root.configure(bg=BG_COLOR)
+        self.cart = []
+        
+        # Create notebook for navigation
+        self.notebook = ttk.Notebook(root)
+        self.notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Create pages
+        self.create_home_page()
+        self.create_cart_page()
+        self.create_requirements_page()
+        
+        # Load product images
+        self.product_images = {}
+        self.load_images()
+
+    def load_images(self):
+        """Preload product images"""
+        for category in products.values():
+            for product in category:
+                try:
+                    response = requests.get(product["image"], timeout=5)
+                    img = Image.open(BytesIO(response.content))
+                    img = img.resize((150, 150), Image.LANCZOS)
+                    self.product_images[product["id"]] = ImageTk.PhotoImage(img)
+                except Exception:
+                    self.product_images[product["id"]] = None
+
+    def add_to_cart(self, product):
+        """Add product to cart"""
+        for item in self.cart:
+            if item["id"] == product["id"]:
+                item["quantity"] += 1
+                messagebox.showinfo("Cart Updated", f"Added another {product['name']}!")
+                return
+        
+        self.cart.append({**product, "quantity": 1})
+        messagebox.showinfo("Added", f"Added {product['name']} to cart!")
+        self.update_cart_tab()
+
+    def remove_from_cart(self, product_id):
+        """Remove product from cart"""
+        self.cart = [item for item in self.cart if item['id'] != product_id]
+        self.update_cart_tab()
+        self.show_cart()
+
+    def update_cart_tab(self):
+        """Update cart tab label"""
+        total_items = sum(item['quantity'] for item in self.cart)
+        self.notebook.tab(1, text=f"🛒 Cart ({total_items})")
+
+    def create_home_page(self):
+        """Create home page with products"""
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="🏠 Home")
+        
+        # Header
+        header = tk.Frame(frame, bg=THEME_COLOR)
+        header.pack(fill="x", pady=10)
+        tk.Label(header, text="🌸 AnimeStyle Dropship", 
+                font=("Arial", 20, "bold"), fg="white", bg=THEME_COLOR).pack(pady=10)
+        
+        # Category selection
+        cat_frame = tk.Frame(frame, bg=BG_COLOR)
+        cat_frame.pack(fill="x", pady=10)
+        tk.Label(cat_frame, text="Browse:", bg=BG_COLOR).pack(side="left", padx=10)
+        
+        self.cat_var = tk.StringVar(value="all")
+        for (text, val) in [("All", "all"), ("Men", "men"), ("Women", "women")]:
+            tk.Radiobutton(cat_frame, text=text, variable=self.cat_var, 
+                          value=val, command=self.show_products, 
+                          bg=BG_COLOR).pack(side="left", padx=5)
+        
+        # Product container
+        self.product_container = tk.Frame(frame, bg=BG_COLOR)
+        self.product_container.pack(fill="both", expand=True)
+        self.show_products()
+
+    def show_products(self):
+        """Show products based on category"""
+        for widget in self.product_container.winfo_children():
+            widget.destroy()
+        
+        # Get products
+        category = self.cat_var.get()
+        if category == "all":
+            product_list = products["men"] + products["women"]
+        else:
+            product_list = products[category]
+        
+        # Display products
+        for i, product in enumerate(product_list):
+            row, col = divmod(i, 2)
+            frame = tk.Frame(self.product_container, bg="white", 
+                            bd=1, relief="groove", padx=10, pady=10)
+            frame.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
+            
+            # Product image
+            img = self.product_images.get(product["id"])
+            if img:
+                tk.Label(frame, image=img, bg="white").pack()
+            
+            # Product info
+            tk.Label(frame, text=product["name"], 
+                    font=("Arial", 11, "bold"), bg="white").pack()
+            tk.Label(frame, text=f"${product['price']:.2f}", 
+                    font=("Arial", 10), fg=ACCENT_COLOR, bg="white").pack()
+            
+            # Action buttons
+            btn_frame = tk.Frame(frame, bg="white")
+            btn_frame.pack(fill="x", pady=5)
+            
+            tk.Button(btn_frame, text="Add to Cart", bg=THEME_COLOR, fg="white",
+                      command=lambda p=product: self.add_to_cart(p)).pack(side="left")
+            tk.Button(btn_frame, text="Details", bg=ACCENT_COLOR, fg="white",
+                      command=lambda url=product["source"]: webbrowser.open(url)).pack(side="left", padx=5)
+        
+        # Configure grid
+        self.product_container.columnconfigure(0, weight=1)
+        self.product_container.columnconfigure(1, weight=1)
+
+    def create_cart_page(self):
+        """Create shopping cart page"""
+        self.cart_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.cart_frame, text="🛒 Cart (0)")
+        self.cart_content = tk.Frame(self.cart_frame, bg=BG_COLOR)
+        self.cart_content.pack(fill="both", expand=True)
+        self.show_cart()
+
+    def show_cart(self):
+        """Show cart contents"""
+        for widget in self.cart_content.winfo_children():
+            widget.destroy()
+        
+        tk.Label(self.cart_content, text="🛒 Your Cart", 
+                font=("Arial", 18, "bold"), bg=BG_COLOR).pack(pady=10)
+        
+        if not self.cart:
+            tk.Label(self.cart_content, text="Your cart is empty", 
+                    font=("Arial", 14), bg=BG_COLOR).pack(pady=50)
+            tk.Button(self.cart_content, text="Browse Products", 
+                     command=lambda: self.notebook.select(0)).pack()
             return
-            
-    st.session_state.cart.append({**product, "quantity": 1})
-    st.success(f"Added {product['name']} to cart!")
-
-def remove_from_cart(product_id):
-    """Remove product from shopping cart"""
-    st.session_state.cart = [item for item in st.session_state.cart if item['id'] != product_id]
-
-def calculate_order():
-    """Calculate order totals"""
-    cart = st.session_state.cart
-    subtotal = sum(item['price'] * item['quantity'] for item in cart)
-    shipping = 0 if subtotal >= SHIPPING_THRESHOLD else 9.99
-    tax = subtotal * TAX_RATE
-    grand_total = subtotal + shipping + tax
-    return subtotal, shipping, tax, grand_total
-
-# ======================================
-#  UI COMPONENTS
-# ======================================
-def product_card(product):
-    """Display product card"""
-    col1, col2 = st.columns([1, 3])
-    with col1:
-        if image := load_image(product["image"]):
-            st.image(image, use_container_width=True)
-    
-    with col2:
-        st.subheader(product["name"])
-        st.markdown(f"**${product['price']:.2f}**")
-        st.caption(product["description"])
-        st.caption(" ".join(f"`{tag}`" for tag in product["tags"]))
-        st.markdown(f"[Product Details]({product['source']})")
         
-        if st.button("🛒 Add to Cart", key=f"add_{product['id']}", use_container_width=True):
-            add_to_cart(product)
-
-def render_products(product_list, title):
-    """Render product grid with pagination"""
-    st.header(title)
-    page = st.session_state.product_page
-    start_idx = page * ITEMS_PER_PAGE
-    end_idx = min(start_idx + ITEMS_PER_PAGE, len(product_list))
-    
-    for i in range(start_idx, end_idx, 2):
-        cols = st.columns(2)
-        for j in range(2):
-            if i + j < end_idx:
-                with cols[j]:
-                    product_card(product_list[i + j])
-    
-    # Pagination controls
-    if len(product_list) > ITEMS_PER_PAGE:
-        prev, _, next_ = st.columns([1, 8, 1])
-        if page > 0 and prev.button("← Previous", use_container_width=True):
-            st.session_state.product_page -= 1
-            st.rerun()
-        if end_idx < len(product_list) and next_.button("Next →", use_container_width=True):
-            st.session_state.product_page += 1
-            st.rerun()
-
-def cart_item(item):
-    """Display cart item"""
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        if image := load_image(item["image"]):
-            st.image(image, width=100)
-    
-    with col2:
-        st.subheader(item["name"])
-        st.markdown(f"**Price:** ${item['price']:.2f} | **Qty:** {item['quantity']}")
-        st.markdown(f"**Subtotal:** ${item['price'] * item['quantity']:.2f}")
-        if st.button("🗑️ Remove", key=f"remove_{item['id']}"):
-            remove_from_cart(item['id'])
-            st.rerun()
-    st.divider()
-
-def checkout_form():
-    """Multi-step checkout form"""
-    step = st.session_state.checkout_step
-    
-    if step == 0:  # Shipping info
-        with st.form("shipping_form"):
-            st.header("📦 Shipping Information")
-            name = st.text_input("Full Name")
-            email = st.text_input("Email")
-            address = st.text_area("Shipping Address")
-            city, state = st.columns(2)
-            city = city.text_input("City")
-            state = state.text_input("State")
-            zip_code, country = st.columns(2)
-            zip_code = zip_code.text_input("ZIP Code")
-            country = country.selectbox("Country", ["USA", "Japan", "UK", "Canada"])
+        # Cart items
+        for item in self.cart:
+            frame = tk.Frame(self.cart_content, bg="white", 
+                            bd=1, relief="groove", padx=10, pady=10)
+            frame.pack(fill="x", padx=20, pady=5)
             
-            if st.form_submit_button("Continue to Payment"):
-                st.session_state.shipping_info = {
-                    "name": name, "email": email, "address": address,
-                    "city": city, "state": state, "zip": zip_code, "country": country
-                }
-                st.session_state.checkout_step = 1
-                st.rerun()
-    
-    elif step == 1:  # Payment info
-        with st.form("payment_form"):
-            st.header("💳 Payment Details")
-            st.write(f"**Shipping to:** {st.session_state.shipping_info['address']}")
-            payment = st.radio("Payment Method", ["Credit Card", "PayPal"])
+            # Product info
+            tk.Label(frame, text=item["name"], 
+                    font=("Arial", 12, "bold"), bg="white", anchor="w").pack(fill="x")
+            tk.Label(frame, text=f"${item['price']:.2f} × {item['quantity']}", 
+                    font=("Arial", 11), bg="white", anchor="w").pack(fill="x")
+            tk.Label(frame, text=f"Total: ${item['price'] * item['quantity']:.2f}", 
+                    font=("Arial", 11), bg="white", anchor="w").pack(fill="x")
             
-            if payment == "Credit Card":
-                card, exp, cvc = st.columns(3)
-                card.text_input("Card Number", placeholder="1234 5678 9012 3456")
-                exp.text_input("Expiry", placeholder="MM/YY")
-                cvc.text_input("CVC", placeholder="123", type="password")
-            
-            if st.form_submit_button("Review Order"):
-                st.session_state.checkout_step = 2
-                st.rerun()
-    
-    elif step == 2:  # Order review
-        with st.form("order_form"):
-            st.header("✅ Order Confirmation")
-            ship = st.session_state.shipping_info
-            st.write(f"**Name:** {ship['name']} | **Email:** {ship['email']}")
-            st.write(f"**Address:** {ship['address']}, {ship['city']}, {ship['state']} {ship['zip']}")
-            
-            subtotal, shipping, tax, total = calculate_order()
-            st.subheader("Order Summary")
-            st.write(f"Subtotal: ${subtotal:.2f}")
-            st.write(f"Shipping: {'FREE' if shipping == 0 else f'${shipping:.2f}'}")
-            st.write(f"Tax: ${tax:.2f}")
-            st.write(f"**Total: ${total:.2f}**")
-            
-            if st.checkbox("I agree to terms"):
-                if st.form_submit_button("Place Order 🚀", type="primary"):
-                    st.session_state.order_id = f"ORD-{abs(hash(str(st.session_state.cart))):010x}"[:10].upper()
-                    st.session_state.checkout_step = 3
-                    st.rerun()
-    
-    if step > 0 and st.button("← Go Back"):
-        st.session_state.checkout_step -= 1
-        st.rerun()
-
-# ======================================
-#  PAGE RENDERING
-# ======================================
-def home_page():
-    """Home page with products"""
-    st.title("🎌 AnimeStyle Dropship")
-    st.subheader("Authentic Japanese Anime Merchandise")
-    
-    # Category selection
-    category = st.radio("Category", ["All", "Men's", "Women's"], horizontal=True)
-    st.divider()
-    
-    # Show products
-    if category == "All":
-        all_products = products["men"] + products["women"]
-        render_products(all_products, "🔥 All Products")
-    elif category == "Men's":
-        render_products(products["men"], "👕 Men's Collection")
-    else:
-        render_products(products["women"], "👚 Women's Collection")
-    
-    # Benefits
-    st.divider()
-    st.write("""
-    **✨ Why Shop With Us?**  
-    • 🚚 Fast shipping from Japan  
-    • ✅ Officially licensed merchandise  
-    • 🔄 30-day hassle-free returns  
-    • 🔒 Secure payments  
-    """)
-
-def cart_page():
-    """Shopping cart page"""
-    st.title("🛒 Your Cart")
-    
-    if not st.session_state.cart:
-        st.info("Your cart is empty")
-        st.button("Continue Shopping", on_click=lambda: st.session_state.update({"current_page": "🏠 Home"}))
-    else:
-        for item in st.session_state.cart:
-            cart_item(item)
+            # Remove button
+            tk.Button(frame, text="Remove", bg=ACCENT_COLOR, fg="white",
+                      command=lambda id=item["id"]: self.remove_from_cart(id)).pack(anchor="e")
         
-        # Order summary
-        subtotal, shipping, tax, total = calculate_order()
-        st.subheader("Order Summary")
-        st.write(f"Subtotal: ${subtotal:.2f}")
-        st.write(f"Shipping: {'FREE 🎉' if shipping == 0 else f'${shipping:.2f}'}")
-        st.write(f"Tax: ${tax:.2f}")
-        st.write(f"**Total: ${total:.2f}**")
-        
-        # Action buttons
-        col1, col2 = st.columns(2)
-        col1.button("Continue Shopping", on_click=lambda: st.session_state.update({"current_page": "🏠 Home"}))
-        if col2.button("Checkout", type="primary"):
-            st.session_state.checkout_step = 0
-        
-        # Checkout form
-        if st.session_state.checkout_step >= 0:
-            checkout_form()
-            
-            # Confirmation
-            if st.session_state.checkout_step == 3:
-                st.success(f"## Order Placed! 🎉 ID: {st.session_state.order_id}")
-                st.balloons()
-                if st.button("Continue Shopping"):
-                    st.session_state.cart = []
-                    st.session_state.checkout_step = 0
-                    st.session_state.current_page = "🏠 Home"
-                    st.rerun()
+        # Checkout button
+        tk.Button(self.cart_content, text="Checkout", 
+                 font=("Arial", 14), bg=THEME_COLOR, fg="white",
+                 command=self.checkout).pack(pady=20)
 
-# ======================================
-#  MAIN APP
-# ======================================
-def main():
-    init_session()
-    
-    # Sidebar
-    with st.sidebar:
-        st.title("🌸 AnimeStyle")
-        page = st.radio("Menu", ["🏠 Home", "📋 Requirements", "🛒 Cart"])
-        st.session_state.current_page = page
+    def checkout(self):
+        """Process checkout"""
+        # Create order through backend
+        try:
+            response = requests.post("http://localhost:5000/order", json={
+                "items": self.cart,
+                "customer": "Anime Fan"
+            })
+            order_id = response.json()["order_id"]
+        except Exception:
+            order_id = f"ORD-{str(uuid.uuid4())[:8].upper()}"
         
-        if st.session_state.cart:
-            st.divider()
-            total_items = sum(item['quantity'] for item in st.session_state.cart)
-            st.write(f"**Cart:** {total_items} item{'s' if total_items > 1 else ''}")
-            _, _, _, total = calculate_order()
-            st.write(f"**Total:** ${total:.2f}")
-    
-    # Page routing
-    if page == "🏠 Home":
-        home_page()
-    elif page == "📋 Requirements":
-        show_requirements()
-    else:
-        cart_page()
+        # Show confirmation
+        messagebox.showinfo("Order Placed", 
+                           f"Thank you for your order!\n\nOrder ID: {order_id}")
+        self.cart = []
+        self.update_cart_tab()
+        self.show_cart()
 
+    def create_requirements_page(self):
+        """Create requirements page"""
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="📋 Requirements")
+        
+        # Content
+        content = """
+        STAKEHOLDERS & REQUIREMENTS
+        
+        👨‍💼 Store Manager:
+        - Inventory management
+        - Order processing
+        - Sales analytics
+        
+        👩 Customer:
+        - Product browsing
+        - Shopping cart
+        - Checkout process
+        
+        SYSTEM FEATURES:
+        1. Product catalog
+        2. Shopping cart
+        3. Order management
+        4. Responsive design
+        5. RESTful backend
+        """
+        
+        tk.Label(frame, text=content, font=("Arial", 11), 
+                justify="left", padx=20, pady=20).pack(fill="both", expand=True)
+
+# ===== MAIN APPLICATION =====
 if __name__ == "__main__":
-    main()
+    import threading
+    threading.Thread(target=run_backend, daemon=True).start()
+    
+    root = tk.Tk()
+    app = AnimeStyleApp(root)
+    root.mainloop()
