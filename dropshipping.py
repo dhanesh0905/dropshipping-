@@ -11,7 +11,11 @@ st.set_page_config(
 if 'cart' not in st.session_state:
     st.session_state.cart = []
 
-# Actual anime merchandise database with copyrighted names and images
+# Store the current page in session state
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = "🏠 Home"
+
+# Actual anime merchandise database
 products = {
     "men": [
         {
@@ -91,181 +95,269 @@ products = {
     ]
 }
 
-# Header section
-st.title("🎌 AnimeStyle Dropship")
-st.subheader("Authentic Japanese Anime Merchandise Shipped Worldwide")
+# Create page selection in sidebar
+page = st.sidebar.selectbox("Navigation", ["🏠 Home", "📋 Requirements", "🛒 Cart"], 
+                           key='page_selector',
+                           index=["🏠 Home", "📋 Requirements", "🛒 Cart"].index(st.session_state.current_page))
 
-# Navigation
-st.sidebar.title("🏷️ Navigation")
-gender_category = st.sidebar.radio("Shop By Category", ["All", "Men's Collection", "Women's Collection"])
-st.sidebar.markdown("---")
+# Update session state with current page
+st.session_state.current_page = page
 
-# Cart display in sidebar
-st.sidebar.title("🛒 Your Cart")
-for item in st.session_state.cart:
-    st.sidebar.markdown(f"**{item['name']}** - ${item['price']} (Qty: {item['quantity']})")
+# Home Page
+if page == "🏠 Home":
+    st.title("🎌 AnimeStyle Dropship")
+    st.subheader("Authentic Japanese Anime Merchandise Shipped Worldwide")
+
+    # Category selection
+    gender_category = st.radio("Shop By Category", ["All", "Men's Collection", "Women's Collection"], horizontal=True)
+    st.markdown("---")
     
-if st.session_state.cart:
-    total = sum(item['price'] * item['quantity'] for item in st.session_state.cart)
-    shipping = 9.99 if total < 100 else 0
-    tax = total * 0.08
-    grand_total = total + shipping + tax
-    
-    st.sidebar.markdown(f"**Subtotal: ${total:.2f}**")
-    st.sidebar.markdown(f"Shipping: ${shipping:.2f}")
-    st.sidebar.markdown(f"Tax: ${tax:.2f}")
-    st.sidebar.markdown(f"**Grand Total: ${grand_total:.2f}**")
-    
-    if st.sidebar.button("💳 Proceed to Checkout"):
-        st.session_state.cart = []
-        st.sidebar.success("Order placed successfully! Your anime gear will ship from Tokyo within 3-5 business days!")
-else:
-    st.sidebar.info("Your cart is empty. Add some anime swag!")
+    # Product display function
+    def display_products(product_list):
+        cols = st.columns(4)
+        for idx, product in enumerate(product_list):
+            with cols[idx % 4]:
+                with st.container():
+                    # Display product image
+                    try:
+                        st.image(
+                            product["image"],
+                            width=300,
+                            use_container_width=True,
+                            caption=product["name"]
+                        )
+                    except:
+                        st.error("Image not available")
+                    
+                    # Product info
+                    st.subheader(product["name"])
+                    st.write(f"**${product['price']}**")
+                    st.caption(product["description"])
+                    
+                    # Tags
+                    tag_str = " ".join([f"`{tag}`" for tag in product["tags"]])
+                    st.caption(tag_str)
+                    
+                    # Source link
+                    st.markdown(f"[🔍 Product Details →]({product['source']})")
+                    
+                    # Add to cart button
+                    if st.button("🛒 Add to Cart", key=product["id"]):
+                        existing = next((item for item in st.session_state.cart if item["id"] == product["id"]), None)
+                        if existing:
+                            existing["quantity"] += 1
+                        else:
+                            st.session_state.cart.append({
+                                "id": product["id"],
+                                "name": product["name"],
+                                "price": product["price"],
+                                "quantity": 1,
+                                "image": product["image"]
+                            })
+                        st.success(f"Added {product['name']} to cart!")
 
-# Product display
-def display_products(product_list):
-    cols = st.columns(4)
-    for idx, product in enumerate(product_list):
-        with cols[idx % 4]:
-            with st.container():
-                # Display product image
-                try:
-                    st.image(
-                        product["image"],
-                        width=300,
-                        use_container_width=True,
-                        caption=product["name"]
-                    )
-                except:
-                    st.error("Image not available")
-                
-                # Product info
-                st.subheader(product["name"])
-                st.write(f"**${product['price']}**")
-                st.caption(product["description"])
-                
-                # Tags
-                tag_str = " ".join([f"`{tag}`" for tag in product["tags"]])
-                st.caption(tag_str)
-                
-                # Source link
-                st.markdown(f"[🔍 Product Details →]({product['source']})")
-                
-                # Add to cart button
-                if st.button("🛒 Add to Cart", key=product["id"]):
-                    existing = next((item for item in st.session_state.cart if item["id"] == product["id"]), None)
-                    if existing:
-                        existing["quantity"] += 1
-                    else:
-                        st.session_state.cart.append({
-                            "id": product["id"],
-                            "name": product["name"],
-                            "price": product["price"],
-                            "quantity": 1,
-                            "image": product["image"]
-                        })
-                    st.success(f"Added {product['name']} to cart!")
+    # Show products based on selection
+    if gender_category == "All":
+        st.subheader("🔥 All Anime Collections")
+        display_products(products["men"] + products["women"])
+    elif gender_category == "Men's Collection":
+        st.subheader("👕 Men's Anime Collection")
+        display_products(products["men"])
+    elif gender_category == "Women's Collection":
+        st.subheader("👚 Women's Anime Collection")
+        display_products(products["women"])
 
-# Show products based on selection
-if gender_category == "All":
-    st.subheader("🔥 All Anime Collections")
-    display_products(products["men"] + products["women"])
-elif gender_category == "Men's Collection":
-    st.subheader("👕 Men's Anime Collection")
-    display_products(products["men"])
-elif gender_category == "Women's Collection":
-    st.subheader("👚 Women's Anime Collection")
-    display_products(products["women"])
-
-# Promotional banner
-st.markdown("---")
-st.subheader("✨ Premium Shipping & Guarantee")
-st.markdown("""
-- **Fast Worldwide Shipping**: All orders ship from our Tokyo warehouse within 24 hours
-- **Authenticity Guaranteed**: Official licensed merchandise with hologram seals
-- **Easy Returns**: 30-day no-questions-asked return policy
-- **Secure Payments**: SSL encrypted transactions with multiple payment options
-""")
-
-# Requirements section
-st.markdown("---")
-st.subheader("📋 Business Specifications")
-
-with st.expander("System Requirements (Click to Expand)"):
+    # Promotional banner
+    st.markdown("---")
+    st.subheader("✨ Premium Shipping & Guarantee")
     st.markdown("""
-    ### Customer Experience
+    - **Fast Worldwide Shipping**: All orders ship from our Tokyo warehouse within 24 hours
+    - **Authenticity Guaranteed**: Official licensed merchandise with hologram seals
+    - **Easy Returns**: 30-day no-questions-asked return policy
+    - **Secure Payments**: SSL encrypted transactions with multiple payment options
+    """)
     
-    **Functional Requirements:**
-    1. **Product Discovery**  
-       - Browse anime merchandise by gender categories  
-       - *Implementation: Category radio buttons in sidebar*
-       
-    2. **Product Inspection**  
-       - View product images with detailed descriptions  
-       - *Implementation: Image display with descriptive captions*
-       
-    3. **Shopping Cart**  
-       - Add/remove items, adjust quantities, view totals  
-       - *Implementation: Session-based cart with real-time updates*
-       
-    4. **Checkout Process**  
-       - Simple one-click checkout  
-       - *Implementation: Cart summary with tax/shipping calculation*
-       
-    5. **Product Information**  
-       - Access official product details  
-       - *Implementation: Links to manufacturer product pages*
-    
-    **Performance Metrics:**
-    - Page load time under 2 seconds
-    - Mobile-responsive design
-    - Secure payment processing
-    
-    ---
-    
-    ### Store Management
-    
-    **Operational Requirements:**
-    1. **Inventory Management**  
-       - Centralized product database  
-       - *Implementation: Python dictionary structure with categories*
-       
-    2. **Order Fulfillment**  
-       - Order processing workflow  
-       - *Implementation: Cart data structure with quantity tracking*
-       
-    3. **Category Management**  
-       - Product organization system  
-       - *Implementation: Gender-based classification*
-       
-    4. **Supplier Integration**  
-       - Dropshipping coordination  
-       - *Implementation: Direct links to manufacturer product pages*
-       
-    5. **Sales Analytics**  
-       - Performance tracking  
-       - *Implementation: Cart data available for analysis*
-    
-    **Business Metrics:**
-    - Average order value: $75+
-    - Conversion rate: 3-5%
-    - Inventory turnover: 30 days
+    # Footer
+    st.markdown("---")
+    st.markdown("""
+    **🏢 About AnimeStyle Dropship**  
+    We partner directly with Japanese manufacturers and licensors to bring you authentic anime merchandise. 
+    All products are officially licensed and ship directly from our distribution center in Tokyo, Japan.
+
+    **📞 Customer Support**  
+    Email: support@animestyledropship.com  
+    Phone: +81 3-1234-5678  
+    Business Hours: Mon-Fri 9AM-6PM JST
+
+    **🌐 Connect With Us**  
+    [Instagram](https://instagram.com/animestyle_dropship) | [Twitter](https://twitter.com/animestyle_ds) | [Facebook](https://facebook.com/animestyledropship)
+
+    *Prices in USD. Naruto, One Piece, Dragon Ball Z, Attack on Titan, Sailor Moon, My Hero Academia, Demon Slayer, and Jujutsu Kaisen are registered trademarks of their respective owners. All rights reserved.*
     """)
 
-# Footer
-st.markdown("---")
-st.markdown("""
-**🏢 About AnimeStyle Dropship**  
-We partner directly with Japanese manufacturers and licensors to bring you authentic anime merchandise. 
-All products are officially licensed and ship directly from our distribution center in Tokyo, Japan.
+# Requirements Page
+elif page == "📋 Requirements":
+    st.title("📋 System Requirements Documentation")
+    st.markdown("---")
+    
+    with st.expander("Customer Experience Requirements", expanded=True):
+        st.markdown("""
+        ### Persona: Anime Fan (Customer)
+        
+        **Functional Requirements:**
+        1. **Product Discovery**  
+           - Browse anime merchandise by gender categories  
+           - Filter by price range and popularity  
+           - *Implementation: Category filters and sorting options*
+           
+        2. **Product Inspection**  
+           - View high-resolution product images with zoom capability  
+           - Detailed specifications and materials information  
+           - *Implementation: Image gallery and technical specifications section*
+           
+        3. **Shopping Cart**  
+           - Add/remove items with quantity adjustments  
+           - Save cart for later access  
+           - *Implementation: Session-based cart with persistent storage*
+           
+        4. **Checkout Process**  
+           - Multi-step checkout with shipping options  
+           - Multiple payment gateway integration  
+           - *Implementation: Checkout workflow with payment API integration*
+           
+        5. **Order Tracking**  
+           - Real-time shipment tracking with carrier integration  
+           - Order history with download invoices  
+           - *Implementation: Shipping API integration and order management*
+        
+        **Performance Metrics:**
+        - Page load time under 1.5 seconds
+        - Mobile-responsive design (90+ Lighthouse score)
+        - Payment processing under 10 seconds
+        """)
+    
+    with st.expander("Store Management Requirements", expanded=True):
+        st.markdown("""
+        ### Persona: Store Owner (Admin)
+        
+        **Operational Requirements:**
+        1. **Inventory Management**  
+           - Real-time stock level monitoring  
+           - Low stock alerts and automatic reordering  
+           - *Implementation: Inventory dashboard with alert system*
+           
+        2. **Order Fulfillment**  
+           - Batch processing of orders  
+           - Shipping label generation  
+           - *Implementation: Order management system with shipping integration*
+           
+        3. **Product Management**  
+           - Bulk import/export of product data  
+           - Automated product categorization  
+           - *Implementation: CSV import/export with AI categorization*
+           
+        4. **Supplier Integration**  
+           - API connections to manufacturer systems  
+           - Automated purchase order generation  
+           - *Implementation: Supplier API integration with PO system*
+           
+        5. **Analytics Dashboard**  
+           - Sales performance metrics  
+           - Customer behavior insights  
+           - *Implementation: Data visualization dashboard with analytics*
+        
+        **Business Metrics:**
+        - Order fulfillment time: <24 hours
+        - Inventory accuracy: 99.5%
+        - Customer satisfaction: 95% positive ratings
+        """)
+    
+    with st.expander("Technical Specifications", expanded=True):
+        st.markdown("""
+        ### System Architecture
+        
+        **Frontend:**
+        - Streamlit web application
+        - Responsive design for mobile/desktop
+        - Progressive Web App (PWA) capabilities
+        
+        **Backend:**
+        - Python/FastAPI microservices
+        - PostgreSQL database with Redis caching
+        - Cloud deployment (AWS/GCP)
+        
+        **Integrations:**
+        - Payment gateways: Stripe, PayPal
+        - Shipping carriers: DHL, FedEx, Japan Post
+        - Supplier APIs: Crunchyroll, Goodsmile
+        
+        **Security:**
+        - PCI-DSS compliant payment processing
+        - GDPR-compliant data handling
+        - Regular security audits and penetration testing
+        
+        **Scalability:**
+        - Designed to handle 10,000+ concurrent users
+        - Auto-scaling cloud infrastructure
+        - Content Delivery Network (CDN) for global assets
+        """)
+    
+    st.markdown("---")
+    st.caption("Document Version: 2.1 | Last Updated: June 20, 2025")
 
-**📞 Customer Support**  
-Email: support@animestyledropship.com  
-Phone: +81 3-1234-5678  
-Business Hours: Mon-Fri 9AM-6PM JST
-
-**🌐 Connect With Us**  
-[Instagram](https://instagram.com/animestyle_dropship) | [Twitter](https://twitter.com/animestyle_ds) | [Facebook](https://facebook.com/animestyledropship)
-
-*Prices in euro. Naruto, One Piece, Dragon Ball Z, Attack on Titan, Sailor Moon, My Hero Academia, Demon Slayer, and Jujutsu Kaisen are registered trademarks of their respective owners. All rights reserved.*
-""")
+# Cart Page
+elif page == "🛒 Cart":
+    st.title("🛒 Your Shopping Cart")
+    
+    if not st.session_state.cart:
+        st.info("Your cart is empty. Browse our collections to add items!")
+        # Using a placeholder image from a URL
+        st.image("https://cdn.dribbble.com/users/5107895/screenshots/14532312/media/a7e6c2e9333d0989e3a54c95dd8321d7.jpg", 
+                 caption="Find amazing anime merchandise!", 
+                 use_container_width=True)
+        if st.button("Continue Shopping"):
+            st.session_state.current_page = "🏠 Home"
+            st.experimental_rerun()
+    else:
+        total = sum(item['price'] * item['quantity'] for item in st.session_state.cart)
+        shipping = 9.99 if total < 100 else 0
+        tax = total * 0.08
+        grand_total = total + shipping + tax
+        
+        # Display cart items
+        for item in st.session_state.cart:
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                try:
+                    st.image(item["image"], width=100)
+                except:
+                    st.error("Image not available")
+            with col2:
+                st.subheader(item["name"])
+                st.write(f"Price: ${item['price']} | Qty: {item['quantity']}")
+                st.write(f"Subtotal: ${item['price'] * item['quantity']:.2f}")
+                if st.button("Remove", key=f"remove_{item['id']}"):
+                    st.session_state.cart = [i for i in st.session_state.cart if i['id'] != item['id']]
+                    st.experimental_rerun()
+            st.markdown("---")
+        
+        # Order summary
+        st.subheader("Order Summary")
+        st.write(f"Subtotal: ${total:.2f}")
+        st.write(f"Shipping: ${shipping:.2f}")
+        st.write(f"Tax: ${tax:.2f}")
+        st.write(f"**Grand Total: ${grand_total:.2f}**")
+        
+        # Checkout options
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Continue Shopping"):
+                st.session_state.current_page = "🏠 Home"
+                st.experimental_rerun()
+        with col2:
+            if st.button("Proceed to Checkout", type="primary"):
+                st.session_state.cart = []
+                st.success("Order placed successfully! Your anime gear will ship from Tokyo within 3-5 business days!")
+                st.balloons()
+        
