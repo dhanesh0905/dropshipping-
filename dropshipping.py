@@ -1,21 +1,19 @@
 import streamlit as st
+import requests
+from io import BytesIO
+from PIL import Image
 
-# Configure page
-st.set_page_config(
-    page_title="AnimeStyle Dropship",
-    page_icon="🌸",
-    layout="wide"
-)
+# ======================================
+#  APP CONFIG
+# ======================================
+st.set_page_config(page_title="AnimeStyle Dropship", page_icon="🌸", layout="wide")
+ITEMS_PER_PAGE = 8
+SHIPPING_THRESHOLD = 100
+TAX_RATE = 0.08
 
-# Initialize session state
-if 'cart' not in st.session_state:
-    st.session_state.cart = []
-
-# Store the current page in session state
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = "🏠 Home"
-
-# Actual anime merchandise database
+# ======================================
+#  PRODUCT DATA
+# ======================================
 products = {
     "men": [
         {
@@ -95,269 +93,327 @@ products = {
     ]
 }
 
-# Create page selection in sidebar
-page = st.sidebar.selectbox("Navigation", ["🏠 Home", "📋 Requirements", "🛒 Cart"], 
-                           key='page_selector',
-                           index=["🏠 Home", "📋 Requirements", "🛒 Cart"].index(st.session_state.current_page))
 
-# Update session state with current page
-st.session_state.current_page = page
+# ======================================
+#  UTILITIES
+# ======================================
+@st.cache_data(show_spinner=False)
+def load_image(url):
+    try:
+        return Image.open(BytesIO(requests.get(url, timeout=5).content))
+    except Exception:
+        return None
 
-# Home Page
-if page == "🏠 Home":
+def init_session():
+    defaults = {
+        'cart': [], 'current_page': "🏠 Home", 
+        'product_page': 0, 'checkout_step': 0
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state: st.session_state[k] = v
+
+def add_to_cart(product):
+    cart = st.session_state.cart
+    existing = next((i for i in cart if i["id"] == product["id"]), None)
+    if existing: 
+        existing["quantity"] += 1
+    else:
+        cart.append({**product, "quantity": 1})
+    st.success(f"Added {product['name']} to cart!")
+
+def remove_from_cart(product_id):
+    st.session_state.cart = [i for i in st.session_state.cart if i['id'] != product_id]
+
+def clear_cart():
+    st.session_state.cart = []
+    st.session_state.checkout_step = -1
+
+def calculate_order():
+    cart = st.session_state.cart
+    total = sum(i['price'] * i['quantity'] for i in cart)
+    shipping = 0 if total >= SHIPPING_THRESHOLD else 9.99
+    tax = total * TAX_RATE
+    return total, shipping, tax, total + shipping + tax
+
+# ======================================
+#  COMPONENTS
+# ======================================
+def product_card(product):
+    with st.container():
+        if img := load_image(product["image"]):
+            st.image(img, use_container_width=True)
+        
+        st.subheader(product["name"])
+        st.markdown(f"**${product['price']}**")
+        st.caption(product["description"])
+        
+        tags = " ".join([f"<span style='background:#ff4b4b;color:white;padding:2px 8px;border-radius:12px;margin:4px;'>{t}</span>" 
+                         for t in product["tags"]])
+        st.markdown(tags, unsafe_allow_html=True)
+        
+        st.markdown(f"[🔍 Product Details]({product['source']})")
+        
+        if st.button("🛒 Add to Cart", key=f"add_{product['id']}", use_container_width=True):
+            add_to_cart(product)
+
+def render_products(products, title):
+    st.header(title)
+    num_pages = max(1, (len(products) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
+    page = st.session_state.product_page
+    
+    # Display products
+    cols = st.columns(4)
+    for i, p in enumerate(products[page*ITEMS_PER_PAGE: (page+1)*ITEMS_PER_PAGE]):
+        with cols[i % 4]: 
+            product_card(p)
+    
+    # Pagination
+    if num_pages > 1:
+        col1, col2, _ = st.columns([1, 1, 6])
+        if page > 0 and col1.button("← Previous", use_container_width=True):
+            st.session_state.product_page -= 1
+            st.rerun()
+        if page < num_pages-1 and col2.button("Next →", use_container_width=True):
+            st.session_state.product_page += 1
+            st.rerun()
+
+def cart_item(item):
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        if img := load_image(item["image"]): 
+            st.image(img, width=100)
+    with col2:
+        st.subheader(item["name"])
+        st.markdown(f"**Price:** ${item['price']} | **Qty:** {item['quantity']}")
+        st.markdown(f"**Subtotal:** ${item['price'] * item['quantity']:.2f}")
+        if st.button("🗑️ Remove", key=f"remove_{item['id']}"):
+            remove_from_cart(item['id'])
+            st.rerun()
+    st.divider()
+
+def checkout_form():
+    step = st.session_state.checkout_step
+    
+    with st.form(f"checkout_step_{step}"):
+        if step == 0:  # Shipping
+            st.header("📦 Shipping Information")
+            name = st.text_input("Full Name", key="name")
+            email = st.text_input("Email", key="email")
+            address = st.text_area("Shipping Address", key="address")
+            city, state = st.columns(2)
+            city = city.text_input("City", key="city")
+            state = state.text_input("State/Province", key="state")
+            zip_code, country = st.columns(2)
+            zip_code = zip_code.text_input("ZIP/Postal Code", key="zip")
+            country = country.selectbox("Country", ["USA", "Japan", "Canada", "UK", "Australia"])
+            
+            if st.form_submit_button("Continue to Payment", use_container_width=True):
+                st.session_state.shipping_info = {
+                    "name": name, "email": email, "address": address,
+                    "city": city, "state": state, "zip": zip_code, "country": country
+                }
+                st.session_state.checkout_step = 1
+                st.rerun()
+                
+        elif step == 1:  # Payment
+            st.header("💳 Payment Details")
+            ship = st.session_state.shipping_info
+            st.subheader("Shipping to:")
+            st.markdown(f"{ship['address']}, {ship['city']}, {ship['state']} {ship['zip']}, {ship['country']}")
+            
+            payment = st.radio("Payment Method", ["Credit Card", "PayPal", "Google Pay"])
+            
+            if payment == "Credit Card":
+                cols = st.columns(3)
+                cols[0].text_input("Card Number", placeholder="1234 5678 9012 3456")
+                cols[1].text_input("Expiration", placeholder="MM/YY")
+                cols[2].text_input("CVC", placeholder="123", type="password")
+            
+            if st.form_submit_button("Review Order", use_container_width=True):
+                st.session_state.checkout_step = 2
+                st.rerun()
+                
+        elif step == 2:  # Review
+            st.header("✅ Order Confirmation")
+            st.success("Almost done! Review your order:")
+            
+            ship = st.session_state.shipping_info
+            st.subheader("Shipping Information:")
+            st.markdown(f"**Name:** {ship['name']} | **Email:** {ship['email']}")  
+            st.markdown(f"**Address:** {ship['address']}")  
+            st.markdown(f"**City:** {ship['city']} | **State:** {ship['state']} | **ZIP:** {ship['zip']} | **Country:** {ship['country']}")  
+            
+            # Order summary
+            st.subheader("Order Summary")
+            total, shipping, tax, grand_total = calculate_order()
+            st.markdown(f"**Subtotal:** ${total:.2f}")
+            st.markdown(f"**Shipping:** {'FREE 🎉' if shipping == 0 else f'${shipping:.2f}'}")
+            st.markdown(f"**Tax:** ${tax:.2f}")
+            st.markdown(f"## Grand Total: ${grand_total:.2f}")
+            
+            if st.checkbox("I agree to terms and conditions", key="terms"):
+                if st.form_submit_button("Place Order 🚀", type="primary", use_container_width=True):
+                    st.session_state.order_id = f"ORD-{hash(str(st.session_state.cart)):x}"[:10].upper()
+                    st.session_state.checkout_step = 3
+                    st.rerun()
+    
+    if step > 0 and st.button("← Go Back", use_container_width=True):
+        st.session_state.checkout_step = max(0, step - 1)
+        st.rerun()
+
+# ======================================
+#  PAGES
+# ======================================
+def home_page():
     st.title("🎌 AnimeStyle Dropship")
     st.subheader("Authentic Japanese Anime Merchandise Shipped Worldwide")
-
-    # Category selection
-    gender_category = st.radio("Shop By Category", ["All", "Men's Collection", "Women's Collection"], horizontal=True)
-    st.markdown("---")
+    st.image("https://images.unsplash.com/photo-1633327941347-6cea0bdce44d?auto=format&fit=crop&w=1200&h=400", 
+             use_container_width=True, caption="Shop exclusive anime merchandise")
     
-    # Product display function
-    def display_products(product_list):
-        cols = st.columns(4)
-        for idx, product in enumerate(product_list):
-            with cols[idx % 4]:
-                with st.container():
-                    # Display product image
-                    try:
-                        st.image(
-                            product["image"],
-                            width=300,
-                            use_container_width=True,
-                            caption=product["name"]
-                        )
-                    except:
-                        st.error("Image not available")
-                    
-                    # Product info
-                    st.subheader(product["name"])
-                    st.write(f"**${product['price']}**")
-                    st.caption(product["description"])
-                    
-                    # Tags
-                    tag_str = " ".join([f"`{tag}`" for tag in product["tags"]])
-                    st.caption(tag_str)
-                    
-                    # Source link
-                    st.markdown(f"[🔍 Product Details →]({product['source']})")
-                    
-                    # Add to cart button
-                    if st.button("🛒 Add to Cart", key=product["id"]):
-                        existing = next((item for item in st.session_state.cart if item["id"] == product["id"]), None)
-                        if existing:
-                            existing["quantity"] += 1
-                        else:
-                            st.session_state.cart.append({
-                                "id": product["id"],
-                                "name": product["name"],
-                                "price": product["price"],
-                                "quantity": 1,
-                                "image": product["image"]
-                            })
-                        st.success(f"Added {product['name']} to cart!")
-
-    # Show products based on selection
-    if gender_category == "All":
-        st.subheader("🔥 All Anime Collections")
-        display_products(products["men"] + products["women"])
-    elif gender_category == "Men's Collection":
-        st.subheader("👕 Men's Anime Collection")
-        display_products(products["men"])
-    elif gender_category == "Women's Collection":
-        st.subheader("👚 Women's Anime Collection")
-        display_products(products["women"])
-
-    # Promotional banner
-    st.markdown("---")
-    st.subheader("✨ Premium Shipping & Guarantee")
-    st.markdown("""
-    - **Fast Worldwide Shipping**: All orders ship from our Tokyo warehouse within 24 hours
-    - **Authenticity Guaranteed**: Official licensed merchandise with hologram seals
-    - **Easy Returns**: 30-day no-questions-asked return policy
-    - **Secure Payments**: SSL encrypted transactions with multiple payment options
-    """)
+    # Category selection
+    category = st.radio("Shop By Category", ["All", "Men's", "Women's"], 
+                        horizontal=True, label_visibility="collapsed")
+    st.divider()
+    
+    # Show products
+    if category == "All": 
+        render_products(products["men"] + products["women"], "🔥 All Collections")
+    elif category == "Men's": 
+        render_products(products["men"], "👕 Men's Collection")
+    else: 
+        render_products(products["women"], "👚 Women's Collection")
+    
+    # Benefits
+    st.divider()
+    st.header("✨ Premium Benefits")
+    cols = st.columns(4)
+    for col, (icon, title, desc) in zip(cols, [
+        ("🚚", "Fast Shipping", "From Tokyo in 24h"),
+        ("✅", "Authentic", "Official merchandise"),
+        ("🔄", "Easy Returns", "30-day policy"),
+        ("🔒", "Secure", "Encrypted payments")
+    ]):
+        col.subheader(f"{icon} {title}")
+        col.caption(desc)
     
     # Footer
-    st.markdown("---")
+    st.divider()
     st.markdown("""
-    **🏢 About AnimeStyle Dropship**  
-    We partner directly with Japanese manufacturers and licensors to bring you authentic anime merchandise. 
-    All products are officially licensed and ship directly from our distribution center in Tokyo, Japan.
+    <div style="text-align:center;padding:20px;background:#f0f2f6;border-radius:10px;">
+        <h4>🏢 About AnimeStyle</h4>
+        <p>Authentic merchandise direct from Japan</p>
+        <p>📞 support@animestyledropship.com | +81 3-1234-5678</p>
+        <p>🌐 
+            <a href="https://instagram.com/animestyle_dropship">Instagram</a> | 
+            <a href="https://twitter.com/animestyle_ds">Twitter</a> | 
+            <a href="https://facebook.com/animestyledropship">Facebook</a>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    **📞 Customer Support**  
-    Email: support@animestyledropship.com  
-    Phone: +81 3-1234-5678  
-    Business Hours: Mon-Fri 9AM-6PM JST
-
-    **🌐 Connect With Us**  
-    [Instagram](https://instagram.com/animestyle_dropship) | [Twitter](https://twitter.com/animestyle_ds) | [Facebook](https://facebook.com/animestyledropship)
-
-    *Prices in USD. Naruto, One Piece, Dragon Ball Z, Attack on Titan, Sailor Moon, My Hero Academia, Demon Slayer, and Jujutsu Kaisen are registered trademarks of their respective owners. All rights reserved.*
-    """)
-
-# Requirements Page
-elif page == "📋 Requirements":
-    st.title("📋 System Requirements Documentation")
-    st.markdown("---")
-    
-    with st.expander("Customer Experience Requirements", expanded=True):
+def requirements_page():
+    st.title("📋 System Requirements")
+    with st.expander("Customer Experience", expanded=True):
         st.markdown("""
-        ### Persona: Anime Fan (Customer)
-        
-        **Functional Requirements:**
-        1. **Product Discovery**  
-           - Browse anime merchandise by gender categories  
-           - Filter by price range and popularity  
-           - *Implementation: Category filters and sorting options*
-           
-        2. **Product Inspection**  
-           - View high-resolution product images with zoom capability  
-           - Detailed specifications and materials information  
-           - *Implementation: Image gallery and technical specifications section*
-           
-        3. **Shopping Cart**  
-           - Add/remove items with quantity adjustments  
-           - Save cart for later access  
-           - *Implementation: Session-based cart with persistent storage*
-           
-        4. **Checkout Process**  
-           - Multi-step checkout with shipping options  
-           - Multiple payment gateway integration  
-           - *Implementation: Checkout workflow with payment API integration*
-           
-        5. **Order Tracking**  
-           - Real-time shipment tracking with carrier integration  
-           - Order history with download invoices  
-           - *Implementation: Shipping API integration and order management*
-        
-        **Performance Metrics:**
-        - Page load time under 1.5 seconds
-        - Mobile-responsive design (90+ Lighthouse score)
-        - Payment processing under 10 seconds
+        - **Product Discovery**: Browse by category, search, filters
+        - **Shopping Cart**: Add/remove items, real-time calculations
+        - **Checkout**: Multi-step with multiple payment options
+        - **Order Management**: Confirmation, tracking, returns
         """)
     
-    with st.expander("Store Management Requirements", expanded=True):
+    with st.expander("Store Management", expanded=True):
         st.markdown("""
-        ### Persona: Store Owner (Admin)
-        
-        **Operational Requirements:**
-        1. **Inventory Management**  
-           - Real-time stock level monitoring  
-           - Low stock alerts and automatic reordering  
-           - *Implementation: Inventory dashboard with alert system*
-           
-        2. **Order Fulfillment**  
-           - Batch processing of orders  
-           - Shipping label generation  
-           - *Implementation: Order management system with shipping integration*
-           
-        3. **Product Management**  
-           - Bulk import/export of product data  
-           - Automated product categorization  
-           - *Implementation: CSV import/export with AI categorization*
-           
-        4. **Supplier Integration**  
-           - API connections to manufacturer systems  
-           - Automated purchase order generation  
-           - *Implementation: Supplier API integration with PO system*
-           
-        5. **Analytics Dashboard**  
-           - Sales performance metrics  
-           - Customer behavior insights  
-           - *Implementation: Data visualization dashboard with analytics*
-        
-        **Business Metrics:**
-        - Order fulfillment time: <24 hours
-        - Inventory accuracy: 99.5%
-        - Customer satisfaction: 95% positive ratings
+        - **Inventory**: Real-time tracking, low stock alerts
+        - **Order Processing**: Dashboard, status workflow
+        - **Product Management**: Add/edit/archive products
+        - **Analytics**: Sales performance, customer metrics
         """)
     
-    with st.expander("Technical Specifications", expanded=True):
+    with st.expander("Technical Specs", expanded=True):
         st.markdown("""
-        ### System Architecture
-        
-        **Frontend:**
-        - Streamlit web application
-        - Responsive design for mobile/desktop
-        - Progressive Web App (PWA) capabilities
-        
-        **Backend:**
-        - Python/FastAPI microservices
-        - PostgreSQL database with Redis caching
-        - Cloud deployment (AWS/GCP)
-        
-        **Integrations:**
-        - Payment gateways: Stripe, PayPal
-        - Shipping carriers: DHL, FedEx, Japan Post
-        - Supplier APIs: Crunchyroll, Goodsmile
-        
-        **Security:**
-        - PCI-DSS compliant payment processing
-        - GDPR-compliant data handling
-        - Regular security audits and penetration testing
-        
-        **Scalability:**
-        - Designed to handle 10,000+ concurrent users
-        - Auto-scaling cloud infrastructure
-        - Content Delivery Network (CDN) for global assets
+        - **Frontend**: Streamlit-based responsive UI
+        - **Backend**: Python microservices, PostgreSQL
+        - **Integrations**: Payment gateways, shipping carriers
+        - **Security**: PCI-DSS compliance, GDPR handling
         """)
-    
-    st.markdown("---")
-    st.caption("Document Version: 2.1 | Last Updated: June 20, 2025")
 
-# Cart Page
-elif page == "🛒 Cart":
+def cart_page():
     st.title("🛒 Your Shopping Cart")
     
     if not st.session_state.cart:
-        st.info("Your cart is empty. Browse our collections to add items!")
-        # Using a placeholder image from a URL
-        st.image("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTuRgH3NfwZOtkZ0zW6R1fUIZbibYkMbe3fgw&s", 
-                 caption="Find amazing anime merchandise!", 
+        st.info("Your cart is empty. Browse our collections!")
+        st.image("https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=600&h=300", 
                  use_container_width=True)
-        if st.button("Continue Shopping"):
-            st.session_state.current_page = "🏠 Home"
-            st.experimental_rerun()
+        st.button("Continue Shopping", use_container_width=True,
+                 on_click=lambda: st.session_state.update({"current_page": "🏠 Home"}))
     else:
-        total = sum(item['price'] * item['quantity'] for item in st.session_state.cart)
-        shipping = 9.99 if total < 100 else 0
-        tax = total * 0.08
-        grand_total = total + shipping + tax
-        
-        # Display cart items
         for item in st.session_state.cart:
-            col1, col2 = st.columns([1, 3])
-            with col1:
-                try:
-                    st.image(item["image"], width=100)
-                except:
-                    st.error("Image not available")
-            with col2:
-                st.subheader(item["name"])
-                st.write(f"Price: ${item['price']} | Qty: {item['quantity']}")
-                st.write(f"Subtotal: ${item['price'] * item['quantity']:.2f}")
-                if st.button("Remove", key=f"remove_{item['id']}"):
-                    st.session_state.cart = [i for i in st.session_state.cart if i['id'] != item['id']]
-                    st.experimental_rerun()
-            st.markdown("---")
+            cart_item(item)
         
-        # Order summary
         st.subheader("Order Summary")
-        st.write(f"Subtotal: ${total:.2f}")
-        st.write(f"Shipping: ${shipping:.2f}")
-        st.write(f"Tax: ${tax:.2f}")
-        st.write(f"**Grand Total: ${grand_total:.2f}**")
+        total, shipping, tax, grand_total = calculate_order()
+        st.markdown(f"**Subtotal:** ${total:.2f}")
+        st.markdown(f"**Shipping:** {'FREE 🎉' if shipping == 0 else f'${shipping:.2f}'}")
+        st.markdown(f"**Tax:** ${tax:.2f}")
+        st.markdown(f"## Grand Total: ${grand_total:.2f}")
         
-        # Checkout options
-        st.markdown("---")
+        st.divider()
         col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Continue Shopping"):
-                st.session_state.current_page = "🏠 Home"
-                st.experimental_rerun()
-        with col2:
-            if st.button("Proceed to Checkout", type="primary"):
-                st.session_state.cart = []
-                st.success("Order placed successfully! Your anime gear will ship from Tokyo within 3-5 business days!")
-                st.balloons()
+        col1.button("Continue Shopping", use_container_width=True,
+                   on_click=lambda: st.session_state.update({"current_page": "🏠 Home"}))
+        if col2.button("Proceed to Checkout", type="primary", use_container_width=True):
+            st.session_state.checkout_step = 0
         
+        if st.session_state.checkout_step >= 0:
+            checkout_form()
+            
+            if st.session_state.checkout_step == 3:
+                st.success(f"## Order Placed! 🎉")
+                st.balloons()
+                st.markdown(f"**Your order ID:** {st.session_state.order_id}")
+                st.image("https://images.unsplash.com/photo-1594179047519-f347310d3322?auto=format&fit=crop&w=600&h=300", 
+                         use_container_width=True)
+                st.button("Continue Shopping", use_container_width=True,
+                         on_click=lambda: [clear_cart(), st.session_state.update({"current_page": "🏠 Home"})])
+
+# ======================================
+#  MAIN APP
+# ======================================
+def main():
+    # Apply styling
+    st.markdown("""
+    <style>
+        .stButton>button { transition: transform 0.3s; }
+        .stButton>button:hover { transform: scale(1.02); }
+        .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 { color: #ff4b4b; }
+        [data-testid="stExpander"] { background: #f9f9f9; border-radius: 10px; }
+        div[data-testid="column"] { padding: 10px; }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    init_session()
+    
+    # Sidebar
+    with st.sidebar:
+        st.title("🌸 AnimeStyle")
+        page = st.radio("Navigation", ["🏠 Home", "📋 Requirements", "🛒 Cart"], 
+                        index=["🏠 Home", "📋 Requirements", "🛒 Cart"].index(st.session_state.current_page))
+        st.session_state.current_page = page
+        
+        # Cart summary
+        if st.session_state.cart:
+            st.divider()
+            st.subheader("Cart Summary")
+            total_items = sum(i['quantity'] for i in st.session_state.cart)
+            st.caption(f"{total_items} item{'s' if total_items > 1 else ''}")
+            total, _, _, grand_total = calculate_order()
+            st.markdown(f"**Total:** ${grand_total:.2f}")
+            st.button("View Cart", on_click=lambda: st.session_state.update({"current_page": "🛒 Cart"}))
+    
+    # Page routing
+    if page == "🏠 Home": home_page()
+    elif page == "📋 Requirements": requirements_page()
+    elif page == "🛒 Cart": cart_page()
+
+if __name__ == "__main__":
+    main()
