@@ -186,3 +186,45 @@ if st.session_state.cart:
         st.sidebar.success("Order placed successfully! Your anime gear is on the way!")
 else:
     st.sidebar.info("Your cart is empty. Add some anime swag!")
+
+
+# Product display
+def display_products(product_list):
+    cols = st.columns(4)
+    for idx, product in enumerate(product_list):
+        with cols[idx % 4]:
+            with st.container():
+                # Product image
+                st.image(
+                    product["image"],
+                    width=300,
+                    use_column_width=True,
+                    caption=product["name"]
+                )
+                
+                # Product info
+                st.subheader(product["name"])
+                st.write(f"**${product['price']}**")
+                st.caption(product["description"])
+                
+                # Tags
+                tag_str = " ".join([f"`{tag}`" for tag in product["tags"]])
+                st.caption(tag_str)
+                
+                # Source link
+                st.markdown(f"[Product Details →]({product['source']})")
+                
+                # Add to cart button
+                if st.button("Add to Cart", key=product["id"]):
+                    existing = next((item for item in st.session_state.cart if item["id"] == product["id"]), None)
+                    if existing:
+                        existing["quantity"] += 1
+                    else:
+                        st.session_state.cart.append({
+                            "id": product["id"],
+                            "name": product["name"],
+                            "price": product["price"],
+                            "quantity": 1,
+                            "image": product["image"]
+                        })
+                    st.success(f"Added {product['name']} to cart!")
