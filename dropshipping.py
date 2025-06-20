@@ -228,3 +228,14 @@ def display_products(product_list):
                             "image": product["image"]
                         })
                     st.success(f"Added {product['name']} to cart!")
+
+# Show products based on selection
+if gender_category == "All":
+    st.subheader("🔥 All Anime Collections")
+    display_products(products["men"] + products["women"])
+elif gender_category == "Men's Collection":
+    st.subheader("👕 Men's Anime Collection")
+    display_products(products["men"])
+elif gender_category == "Women's Collection":
+    st.subheader("👚 Women's Anime Collection")
+    display_products(products["women"])
