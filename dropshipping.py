@@ -98,6 +98,79 @@ products = {
 }
 
 # ======================================
+#  STAKEHOLDERS & REQUIREMENTS
+# ======================================
+def show_requirements():
+    """Display stakeholder requirements and system specifications"""
+    st.title("📋 System Requirements")
+    st.subheader("Stakeholder Analysis & Functional Specifications")
+    
+    # Store Manager requirements
+    with st.expander("👨‍💼 Store Manager (Inventory & Operations)", expanded=True):
+        st.markdown("""
+        **Functional Requirements:**
+        1. **Inventory Management** - Add/update/archive products in real-time  
+        2. **Order Processing** - View, fulfill, and track customer orders  
+        3. **Sales Analytics** - Generate revenue reports with date/category filters  
+        4. **Discount Management** - Create and apply promotional offers  
+        5. **Customer Insights** - View purchase history and preferences  
+        
+        **Non-Functional Requirements:**
+        1. **Performance** - Handle 1000+ concurrent users during sales events  
+        2. **Security** - PCI-DSS compliant payment processing  
+        """)
+    
+    # Customer requirements
+    with st.expander("👩 Customer (Shopping Experience)", expanded=True):
+        st.markdown("""
+        **Functional Requirements:**
+        1. **Personalized Recommendations** - AI-powered suggestions based on browsing  
+        2. **Wishlists** - Save items for later purchase  
+        3. **Order Tracking** - Real-time shipment status updates  
+        4. **Easy Returns** - Self-service return initiation  
+        5. **Multi-language** - Japanese/English interface toggle  
+        
+        **Non-Functional Requirements:**
+        1. **Usability** - Intuitive navigation with 90+ satisfaction score  
+        2. **Reliability** - 99.9% uptime with 24/7 availability  
+        """)
+    
+    # Content Moderator requirements
+    with st.expander("👮 Content Moderator (Compliance & Safety)"):
+        st.markdown("""
+        **Functional Requirements:**
+        1. **Content Review** - Approve/reject user-generated content  
+        2. **Compliance Monitoring** - Ensure legal/age-appropriate merchandise  
+        3. **Copyright Protection** - Detect and remove infringing listings  
+        4. **User Reporting** - Handle user reports of inappropriate content  
+        5. **Moderation Dashboard** - Centralized interface for review tasks  
+        
+        **Non-Functional Requirements:**
+        1. **Accuracy** - 95%+ precision in copyright detection  
+        2. **Response Time** - Resolve reports within 24 hours  
+        """)
+    
+    st.divider()
+    st.header("🔧 System Use Cases")
+    st.markdown("""
+    1. **Seasonal Collection Launch** - Manager adds new anime merchandise  
+    2. **Flash Sale Event** - Create time-limited discounts for premium members  
+    3. **Order Fulfillment** - Process and ship customer orders with tracking  
+    4. **Personalized Shopping** - Show tailored recommendations based on history  
+    5. **Wishlist Management** - Save and share favorite items with friends  
+    6. **Return Processing** - Handle product returns and issue refunds  
+    7. **Content Moderation** - Review and approve new product submissions  
+    8. **Multi-language Support** - Switch between Japanese/English interfaces  
+    """)
+    
+    st.divider()
+    st.header("⚙️ Technical Specifications")
+    cols = st.columns(3)
+    cols[0].markdown("**Frontend:**\n- Streamlit\n- React Components")
+    cols[1].markdown("**Backend:**\n- FastAPI\n- PostgreSQL")
+    cols[2].markdown("**Infrastructure:**\n- AWS EC2\n- Cloudflare CDN")
+
+# ======================================
 #  UTILITY FUNCTIONS
 # ======================================
 @st.cache_data(show_spinner=False)
@@ -348,7 +421,7 @@ def main():
     # Sidebar
     with st.sidebar:
         st.title("🌸 AnimeStyle")
-        page = st.radio("Menu", ["🏠 Home", "🛒 Cart"])
+        page = st.radio("Menu", ["🏠 Home", "📋 Requirements", "🛒 Cart"])
         st.session_state.current_page = page
         
         if st.session_state.cart:
@@ -361,6 +434,8 @@ def main():
     # Page routing
     if page == "🏠 Home":
         home_page()
+    elif page == "📋 Requirements":
+        show_requirements()
     else:
         cart_page()
 
