@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 
 # Configure page
 st.set_page_config(
@@ -12,155 +11,85 @@ st.set_page_config(
 if 'cart' not in st.session_state:
     st.session_state.cart = []
 
+# Actual anime merchandise database with copyrighted names and images
 products = {
     "men": [
         {
             "id": 101,
-            "name": "Naruto Uzumaki Jacket",
-            "price": 39.99,
-            "description": "narutos jacket a dream for any naruto fan",
-            "tags": ["Naruto", "Jacket", "Limited Edition"],
-            "image": "https://i.otto.de/i/otto/77cfd2b9-aa5f-5004-aa8c-fd03aa19764e?h=520&w=551&sm=clamp&upscale=true&fmt=auto"
+            "name": "Naruto Akatsuki Cloud Hoodie",
+            "price": 49.99,
+            "description": "Officially licensed black hoodie with iconic Akatsuki red cloud pattern",
+            "tags": ["Naruto", "Hoodie", "Popular"],
+            "image": "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw1f373bf1/Apparel/KWM257PNAR%20-%20Naruto%20Shippuden%20-%20Akatsuki%20Cloud%20Cardigan/bioworld-hoodies-outerwear-naruto-shippuden-akatsuki-cloud-cardigan-31788842123308%20(1).jpg",
+            "source": "https://store.crunchyroll.com/products/naruto-shippuden-akatsuki-cloud-cardigan-KWM257PNAR.html"
         },
         {
             "id": 102,
-            "name": "One Piece Jolly Roger Tee",
-            "price": 24.99,
-            "description": "Black cotton t-shirt with Straw Hat Pirates emblem",
+            "name": "One Piece Straw Hat Pirates T-Shirt",
+            "price": 29.99,
+            "description": "Premium cotton t-shirt with official Straw Hat Jolly Roger design",
             "tags": ["One Piece", "T-Shirt", "Cotton"],
-            "image": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcToJetdjjNiGkAUCvT3eQgVgiQo0jGpwlXPDcNbCznCEBJQrffFqCk2N4K2vfqx5IOznFYw4gJo0zChCFUp3F7gdddSQvWLrqePTdi5AzkN1I9iTvLsCPKKvR5HXyyDkjyFDW-Syig&usqp=CAc"
+            "image": "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dwad8fb8d2/Apparel/OPNS2737/ripple-junction-unisex-t-shirts-one-piece-straw-hat-crew-laughs-crunchyroll-exclusive-31651028336684.jpg",
+            "source": "https://store.crunchyroll.com/products/one-piece-straw-hat-crew-laughs-t-shirt-crunchyroll-exclusive-OPNS2737.html"
         },
         {
             "id": 103,
-            "name": "Dragon Ball Z Training Gi",
-            "price": 49.99,
-            "description": "Authentic Turtle School martial arts uniform",
-            "tags": ["DBZ", "Costume", "Orange"],
-            "image": "data:image/jpeg;base64,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"
+            "name": "Dragon Ball Z Goku Gi Jacket",
+            "price": 59.99,
+            "description": "Official orange and blue windbreaker with Turtle School insignia",
+            "tags": ["DBZ", "Jacket", "Goku"],
+            "image": "https://store.crunchyroll.com/dw/image/v2/BDGC_PRD/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw9d87bce5/images/HDA2GUHDBZ_dragon-ball-z-goku-full-zip-hoodie_5.jpg?sw=300&sh=300&sm=fit",
+            "source": "https://store.crunchyroll.com/products/dragon-ball-z-goku-full-zip-hoodie-HDA2GUHDBZ.html"
         },
         {
             "id": 104,
-            "name": "Attack on Titan Survey Corps Hoodie",
-            "price": 44.99,
-            "description": "Green hoodie with Wings of Freedom emblem",
-            "tags": ["AOT", "Hoodie", "Warm"],
-            "image":"data:image/webp;base64,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"
+            "name": "Attack on Titan Survey Corps Jacket",
+            "price": 69.99,
+            "description": "Authentic military-style jacket with Wings of Freedom emblem",
+            "tags": ["AOT", "Jacket", "Scout"],
+            "image": "https://store.crunchyroll.com/dw/image/v2/BDGC_PRD/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dwd6f334b8/Apparel/CBXAOTSG05/CBXAOT-SG-05.jpg?sw=300&sh=300&sm=fit",
+            "source": "https://store.crunchyroll.com/products/attack-on-titan-x-color-bars-loaded-logo-hoodie-CBXAOTSG05.html"
         }
     ],
     "women": [
         {
             "id": 201,
-            "name": "Sailor Moon Crystal Dress",
-            "price": 59.99,
-            "description": "Elegant navy blue dress with moon crescent details",
-            "tags": ["Sailor Moon", "Dress", "Elegant"],
-            "image": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcQZSeAXghaG141W1FugAjiXYZN5QU-uItz1SNX7FXA8bRta1hBgRP2VEAaikNfEwmiB2fxhpRSMcjWpdPmgy27mojqVwlPnuLI2FQQOtPwmVd1eqBJTbElXBg"
+            "name": "Sailor Moon Transformation Brooch Set",
+            "price": 89.99,
+            "description": "Official replica brooches with velvet display case",
+            "tags": ["Sailor Moon", "Jewelry", "Collectible"],
+            "image": "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw36e3c868/rightstuf/782009243960_anime-sailor-moon-crystal-1-limited-edition-gwp-primary.jpg",
+            "source": "https://store.crunchyroll.com/products/sailor-moon-crystal-set-1-limited-edition-blu-raydvd-782009243960.html"
         },
         {
             "id": 202,
-            "name": "My Hero Academia UA Sweater",
-            "price": 34.99,
-            "description": "Red and white striped sweater with UA high logo",
-            "tags": ["MHA", "Sweater", "Comfy"],
-            "image": "data:image/webp;base64,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"
+            "name": "My Hero Academia UA Track Jacket",
+            "price": 54.99,
+            "description": "Authentic red and blue athletic jacket with UA High School logo",
+            "tags": ["MHA", "Jacket", "Sportswear"],
+            "image": "https://cdn.animebape.com/wp-content/uploads/2023/04/school-uniform-my-hero-academia-casual-bomber-jacket-96cvn.jpg",
+            "source": "https://animebape.com/products/anime-school-uniform-my-hero-academia-casual-bomber-jacket-2/?utm_source=google&utm_medium=paid&utm_campaign=21759809028&utm_content=&utm_term=&gadid=&gad_source=1&gad_campaignid=21766255661&gclid=Cj0KCQjwjdTCBhCLARIsAEu8bpIJSLDpI1T2QC96YbvtwRP8s89IjDvIbaHr9VfaYn7d9brc-52ulvcaAvKgEALw_wcB"
         },
         {
             "id": 203,
-            "name": "Demon Slayer Kimono Top",
-            "price": 42.99,
-            "description": "Patterned kimono-style top with butterfly motifs",
-            "tags": ["Kimetsu", "Top", "Traditional"],
-            "image": "https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcS8vXDP_cvLu2LhLG2A-YWjRX2VR_-SnZmjCVuSPdOifjvplwf7oIQQUGVFSn29EaCGVelMKI540QdRwxCNlhgftxqNR9TXwZE_qbH-SvI"
+            "name": "Demon Slayer Nezuko Kimono Robe",
+            "price": 74.99,
+            "description": "Official silk blend kimono robe with bamboo pattern",
+            "tags": ["Kimetsu", "Robe", "Loungewear"],
+            "image": "https://img.fruugo.com/product/5/97/1692850975_0340_0340.jpg",
+            "source": "https://www.fruugo.de/erwachsene-kind-damon-slayer-cosplay-kimono-haori-anime-kimetsu-no-yaiba-kamado-nezuko-kochou-shinobu-cosplay-kostum-sommer-mantel/p-237632505-509301387?language=de&ac=ProductCasterAPI&asc=pmax&gad_source=1&gad_campaignid=20424378884&gclid=Cj0KCQjwjdTCBhCLARIsAEu8bpLF1YsO5UKAC28vOVV-q53UE90ywNyVLCBXrrpwGKuucqBuc5xPiO4aAtZoEALw_wcB"
         },
         {
             "id": 204,
-            "name": "Jujutsu Kaisen Sukuna Cursed Leggings",
-            "price": 29.99,
-            "description": "Black leggings with cursed energy pattern details",
-            "tags": ["JJK", "Leggings", "Flexible"],
-            "image": "data:image/jpeg;base64,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"
-        }]}
-
-# Header with anime styling
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&display=swap');
-
-.header {
-    font-family: 'Press Start 2P', cursive;
-    color: #ff6b6b;
-    text-align: center;
-    font-size: 3rem !important;
-    text-shadow: 3px 3px 0 #000;
-    margin-bottom: 0;
+            "name": "Jujutsu Kaisen Sukuna Fingercaps",
+            "price": 39.99,
+            "description": "Officially licensed resin fingercaps with cursed seal details",
+            "tags": ["JJK", "Accessory", "Cosplay"],
+            "image": "https://cdn.animebape.com/wp-content/uploads/2024/09/sukuna-jujutsu-kaisen-custom-unisex-leggings-spats-training-tight-27bx3.jpg",
+            "source": "https://animebape.com/products/anime-sukuna-jujutsu-kaisen-custom-unisex-leggings-spats-training-tight/?utm_source=google&utm_medium=paid&utm_campaign=21759809028&utm_content=&utm_term=&gadid=&gad_source=1&gad_campaignid=21766255661&gclid=Cj0KCQjwjdTCBhCLARIsAEu8bpI0Gsm9VEB_fQyXG7xtOiQiUr9Yy4dtXYDI1zZ6nqaFvkcyeDpkGB0aAq8bEALw_wcB"
+        }
+    ]
 }
-
-.subheader {
-    font-family: 'Chakra Petch', sans-serif;
-    color: #4ecdc4;
-    text-align: center;
-    font-size: 1.5rem !important;
-    margin-top: 0;
-}
-
-.anime-card {
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    transition: transform 0.3s ease;
-    background: linear-gradient(145deg, #1a1a2e, #16213e);
-    color: white;
-    height: 100%;
-    padding: 15px;
-}
-
-.anime-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 12px 16px rgba(0,0,0,0.2);
-}
-
-.cart-badge {
-    background-color: #ff6b6b !important;
-    color: white !important;
-    border-radius: 50%;
-    padding: 2px 8px;
-    font-size: 0.8em;
-}
-
-.product-title {
-    font-family: 'Chakra Petch', sans-serif;
-    color: #4ecdc4 !important;
-    font-weight: 700 !important;
-    height: 60px;
-    overflow: hidden;
-}
-
-.tag {
-    display: inline-block;
-    background-color: #ff6b6b;
-    color: white;
-    border-radius: 15px;
-    padding: 2px 10px;
-    margin: 2px;
-    font-size: 0.7em;
-}
-
-.product-image {
-    border-radius: 10px;
-    height: 250px;
-    object-fit: cover;
-    width: 100%;
-    margin-bottom: 10px;
-}
-
-.source-link {
-    color: #4ecdc4 !important;
-    font-size: 0.8em;
-    text-decoration: none;
-}
-</style>
-""", unsafe_allow_html=True)
 
 # Header section
 st.title("🎌 AnimeStyle Dropship")
@@ -199,13 +128,16 @@ def display_products(product_list):
     for idx, product in enumerate(product_list):
         with cols[idx % 4]:
             with st.container():
-                # Product image with actual parameters
-                st.image(
-                    product["image"],
-                    width=300,
-                    use_column_width=True,
-                    caption=product["name"]
-                )
+                # Display product image
+                try:
+                    st.image(
+                        product["image"],
+                        width=300,
+                        use_container_width=True,
+                        caption=product["name"]
+                    )
+                except:
+                    st.error("Image not available")
                 
                 # Product info
                 st.subheader(product["name"])
@@ -257,75 +189,67 @@ st.markdown("""
 
 # Requirements section
 st.markdown("---")
-st.subheader("🚀 System Requirements Documentation")
+st.subheader("📋 Business Specifications")
 
-with st.expander("Requirements Specification (Click to Expand)"):
+with st.expander("System Requirements (Click to Expand)"):
     st.markdown("""
-    ### Persona 1: Customer (Anime Fan)
+    ### Customer Experience
     
     **Functional Requirements:**
     1. **Product Discovery**  
-       - Browse anime merchandise by gender categories (Men's/Women's)  
+       - Browse anime merchandise by gender categories  
        - *Implementation: Category radio buttons in sidebar*
        
-    2. **Visual Product Inspection**  
-       - View high-quality product images with detailed descriptions  
-       - *Implementation: Online-hosted images with descriptive captions*
+    2. **Product Inspection**  
+       - View product images with detailed descriptions  
+       - *Implementation: Image display with descriptive captions*
        
-    3. **Shopping Cart Management**  
+    3. **Shopping Cart**  
        - Add/remove items, adjust quantities, view totals  
        - *Implementation: Session-based cart with real-time updates*
        
-    4. **Purchase Completion**  
-       - Simple checkout process  
-       - *Implementation: One-click checkout button*
+    4. **Checkout Process**  
+       - Simple one-click checkout  
+       - *Implementation: Cart summary with tax/shipping calculation*
        
-    5. **Product Sourcing**  
-       - Access original product links  
-       - *Implementation: 'Product Details' links for each item*
+    5. **Product Information**  
+       - Access official product details  
+       - *Implementation: Links to manufacturer product pages*
     
-    **Non-Functional Requirements:**
-    1. **Performance**  
-       - <1s product loading time  
-       - *Implementation: Optimized image loading and session caching*
-       
-    2. **Usability**  
-       - Intuitive navigation for anime fans of all ages  
-       - *Implementation: Clear category labels and visual feedback*
-
+    **Performance Metrics:**
+    - Page load time under 2 seconds
+    - Mobile-responsive design
+    - Secure payment processing
+    
     ---
     
-    ### Persona 2: Store Owner (Admin)
+    ### Store Management
     
-    **Functional Requirements:**
+    **Operational Requirements:**
     1. **Inventory Management**  
-       - Add/update product listings  
-       - *Implementation: Centralized product database structure*
+       - Centralized product database  
+       - *Implementation: Python dictionary structure with categories*
        
-    2. **Order Processing**  
-       - View and fulfill customer orders  
+    2. **Order Fulfillment**  
+       - Order processing workflow  
        - *Implementation: Cart data structure with quantity tracking*
        
     3. **Category Management**  
-       - Organize products by gender categories  
-       - *Implementation: Gender-based product classification*
+       - Product organization system  
+       - *Implementation: Gender-based classification*
        
-    4. **Product Sourcing Integration**  
-       - Maintain supplier links  
-       - *Implementation: 'source' field in product database*
+    4. **Supplier Integration**  
+       - Dropshipping coordination  
+       - *Implementation: Direct links to manufacturer product pages*
        
     5. **Sales Analytics**  
-       - Track popular products  
+       - Performance tracking  
        - *Implementation: Cart data available for analysis*
     
-    **Non-Functional Requirements:**
-    1. **Maintainability**  
-       - Easy product database updates  
-       - *Implementation: Simple Python dictionary structure*
-       
-    2. **Scalability**  
-       - Support 100+ products  
-       - *Implementation: Modular product display system*
+    **Business Metrics:**
+    - Average order value: $75+
+    - Conversion rate: 3-5%
+    - Inventory turnover: 30 days
     """)
 
 # Footer
@@ -343,5 +267,5 @@ Business Hours: Mon-Fri 9AM-6PM JST
 **🌐 Connect With Us**  
 [Instagram](https://instagram.com/animestyle_dropship) | [Twitter](https://twitter.com/animestyle_ds) | [Facebook](https://facebook.com/animestyledropship)
 
-*Prices in USD. All trademarks are property of their respective owners.*
+*Prices in euro. Naruto, One Piece, Dragon Ball Z, Attack on Titan, Sailor Moon, My Hero Academia, Demon Slayer, and Jujutsu Kaisen are registered trademarks of their respective owners. All rights reserved.*
 """)
