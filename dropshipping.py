@@ -1,6 +1,6 @@
 import tkinter as tk
 import ttkbootstrap as ttk
-import uuid, random, time, requests, webbrowser
+import uuid, random, time, requests, webbrowser, json, os
 from PIL import Image
 from io import BytesIO
 import threading
@@ -14,41 +14,94 @@ class BackendService:
             {"username": "manager", "role": "marketing", "status": "active"},
             {"username": "customer1", "role": "customer", "status": "active"},
         ]
-        self.products = {
-            "men": self._create_products([
-                (101, "Naruto Hoodie", 49.99, 
-                 "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw1f373bf1/Apparel/KWM257PNAR%20-%20Naruto%20Shippuden%20-%20Akatsuki%20Cloud%20Cardigan/bioworld-hoodies-outerwear-naruto-shippuden-akatsuki-cloud-cardigan-31788842123308%20(1).jpg",
-                 "https://store.crunchyroll.com/products/naruto-shippuden-akatsuki-cloud-cardigan-KWM257PNAR.html"),
-                (102, "One Piece T-Shirt", 29.99,
-                 "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dwad8fb8d2/Apparel/OPNS2737/ripple-junction-unisex-t-shirts-one-piece-straw-hat-crew-laughs-crunchyroll-exclusive-31651028336684.jpg",
-                 "https://store.crunchyroll.com/products/one-piece-straw-hat-crew-laughs-t-shirt-crunchyroll-exclusive-OPNS2737.html"),
-                (103, "DBZ Jacket", 59.99,
-                 "https://store.crunchyroll.com/dw/image/v2/BDGC_PRD/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw9d87bce5/images/HDA2GUHDBZ_dragon-ball-z-goku-full-zip-hoodie_5.jpg?sw=300&sh=300&sm=fit",
-                 "https://store.crunchyroll.com/products/dragon-ball-z-goku-full-zip-hoodie-HDA2GUHDBZ.html"),
-                (104, "AOT Jacket", 69.99,
-                 "https://store.crunchyroll.com/dw/image/v2/BDGC_PRD/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dwd6f334b8/Apparel/CBXAOTSG05/CBXAOT-SG-05.jpg?sw=300&sh=300&sm=fit",
-                 "https://store.crunchyroll.com/products/attack-on-titan-x-color-bars-loaded-logo-hoodie-CBXAOTSG05.html")
-            ]),
-            "women": self._create_products([
-                (201, "Sailor Moon Brooch", 89.99,
-                 "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw36e3c868/rightstuf/782009243960_anime-sailor-moon-crystal-1-limited-edition-gwp-primary.jpg",
-                 "https://store.crunchyroll.com/products/sailor-moon-crystal-set-1-limited-edition-blu-raydvd-782009243960.html"),
-                (202, "MHA Jacket", 54.99,
-                 "https://cdn.animebape.com/wp-content/uploads/2023/04/school-uniform-my-hero-academia-casual-bomber-jacket-96cvn.jpg",
-                 "https://animebape.com/products/anime-school-uniform-my-hero-academia-casual-bomber-jacket-2/"),
-                (203, "Nezuko Kimono", 74.99,
-                 "https://img.fruugo.com/product/5/97/1692850975_0340_0340.jpg",
-                 "https://www.fruugo.de/erwachsene-kind-damon-slayer-cosplay-kimono-haori-anime-kimetsu-no-yaiba-kamado-nezuko-kochou-shinobu-cosplay-kostum-sommer-mantel/p-237632505-509301387"),
-                (204, "JJK Fingercaps", 39.99,
-                 "https://cdn.animebape.com/wp-content/uploads/2024/09/sukuna-jujutsu-kaisen-custom-unisex-leggings-spats-training-tight-27bx3.jpg",
-                 "https://animebape.com/products/anime-sukuna-jujutsu-kaisen-custom-unisex-leggings-spats-training-tight/")
-            ])
+        self.products = self.load_products()
+    
+    def load_products(self):
+        """Load products from JSON file with error handling"""
+        try:
+            # Create products.json if it doesn't exist
+            if not os.path.exists("products.json"):
+                self.create_sample_products()
+                
+            with open("products.json", "r") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading products: {e}")
+            return self.create_sample_products()
+    
+    def create_sample_products(self):
+        """Create sample products and save to JSON file"""
+        products = {
+            "men": [
+                {
+                    "id": 101,
+                    "name": "Naruto Hoodie",
+                    "price": 49.99,
+                    "image": "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw1f373bf1/Apparel/KWM257PNAR%20-%20Naruto%20Shippuden%20-%20Akatsuki%20Cloud%20Cardigan/bioworld-hoodies-outerwear-naruto-shippuden-akatsuki-cloud-cardigan-31788842123308%20(1).jpg",
+                    "source": "https://store.crunchyroll.com/products/naruto-shippuden-akatsuki-cloud-cardigan-KWM257PNAR.html"
+                },
+                {
+                    "id": 102,
+                    "name": "One Piece T-Shirt",
+                    "price": 29.99,
+                    "image": "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dwad8fb8d2/Apparel/OPNS2737/ripple-junction-unisex-t-shirts-one-piece-straw-hat-crew-laughs-crunchyroll-exclusive-31651028336684.jpg",
+                    "source": "https://store.crunchyroll.com/products/one-piece-straw-hat-crew-laughs-t-shirt-crunchyroll-exclusive-OPNS2737.html"
+                },
+                {
+                    "id": 103,
+                    "name": "DBZ Jacket",
+                    "price": 59.99,
+                    "image": "https://store.crunchyroll.com/dw/image/v2/BDGC_PRD/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw9d87bce5/images/HDA2GUHDBZ_dragon-ball-z-goku-full-zip-hoodie_5.jpg?sw=300&sh=300&sm=fit",
+                    "source": "https://store.crunchyroll.com/products/dragon-ball-z-goku-full-zip-hoodie-HDA2GUHDBZ.html"
+                },
+                {
+                    "id": 104,
+                    "name": "AOT Jacket",
+                    "price": 69.99,
+                    "image": "https://store.crunchyroll.com/dw/image/v2/BDGC_PRD/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dwd6f334b8/Apparel/CBXAOTSG05/CBXAOT-SG-05.jpg?sw=300&sh=300&sm=fit",
+                    "source": "https://store.crunchyroll.com/products/attack-on-titan-x-color-bars-loaded-logo-hoodie-CBXAOTSG05.html"
+                }
+            ],
+            "women": [
+                {
+                    "id": 201,
+                    "name": "Sailor Moon Brooch",
+                    "price": 89.99,
+                    "image": "https://store.crunchyroll.com/on/demandware.static/-/Sites-crunchyroll-master-catalog/default/dw36e3c868/rightstuf/782009243960_anime-sailor-moon-crystal-1-limited-edition-gwp-primary.jpg",
+                    "source": "https://store.crunchyroll.com/products/sailor-moon-crystal-set-1-limited-edition-blu-raydvd-782009243960.html"
+                },
+                {
+                    "id": 202,
+                    "name": "MHA Jacket",
+                    "price": 54.99,
+                    "image": "https://cdn.animebape.com/wp-content/uploads/2023/04/school-uniform-my-hero-academia-casual-bomber-jacket-96cvn.jpg",
+                    "source": "https://animebape.com/products/anime-school-uniform-my-hero-academia-casual-bomber-jacket-2/"
+                },
+                {
+                    "id": 203,
+                    "name": "Nezuko Kimono",
+                    "price": 74.99,
+                    "image": "https://img.fruugo.com/product/5/97/1692850975_0340_0340.jpg",
+                    "source": "https://www.fruugo.de/erwachsene-kind-damon-slayer-cosplay-kimono-haori-anime-kimetsu-no-yaiba-kamado-nezuko-kochou-shinobu-cosplay-kostum-sommer-mantel/p-237632505-509301387"
+                },
+                {
+                    "id": 204,
+                    "name": "JJK Fingercaps",
+                    "price": 39.99,
+                    "image": "https://cdn.animebape.com/wp-content/uploads/2024/09/sukuna-jujutsu-kaisen-custom-unisex-leggings-spats-training-tight-27bx3.jpg",
+                    "source": "https://animebape.com/products/anime-sukuna-jujutsu-kaisen-custom-unisex-leggings-spats-training-tight/"
+                }
+            ]
         }
+        
+        # Save to file
+        with open("products.json", "w") as f:
+            json.dump(products, f, indent=2)
+        
+        return products
     
-    def _create_products(self, items):
-        return [{"id": i[0], "name": i[1], "price": i[2], "image": i[3], "source": i[4]} for i in items]
-    
-    def get_products(self): return self.products
+    def get_products(self): 
+        return self.products
     
     def create_order(self, cart):
         order = {
@@ -362,5 +415,3 @@ if __name__ == "__main__":
     root = ttk.Window(themename="morph")
     AnimeStyleApp(root)
     root.mainloop()
-    
-    
