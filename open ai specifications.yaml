@@ -1,0 +1,284 @@
+openapi: 3.0.0
+info:
+  title: AnimeStyle Dropship API
+  description: REST API for anime merchandise e-commerce platform
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000/api
+    description: Development server
+paths:
+  /products:
+    get:
+      summary: Get products
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [men, women]
+          description: Filter products by category
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  men:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  women:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+  /cart:
+    get:
+      summary: Get cart contents
+      responses:
+        '200':
+          description: Current shopping cart
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CartItem'
+    post:
+      summary: Add item to cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddToCartRequest'
+      responses:
+        '201':
+          description: Item added to cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '404':
+          description: Product not found
+  /cart/{product_id}:
+    delete:
+      summary: Remove item from cart
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Item removed from cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '404':
+          description: Item not found in cart
+  /orders:
+    get:
+      summary: List all orders
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+    post:
+      summary: Create new order
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: Cart is empty
+  /reports/sales:
+    get:
+      summary: Get sales report
+      responses:
+        '200':
+          description: Sales report data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesReport'
+  /admin/users:
+    get:
+      summary: List all users
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    put:
+      summary: Toggle user status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToggleUserRequest'
+      responses:
+        '200':
+          description: User status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: User not found
+  /requirements:
+    get:
+      summary: Get system requirements
+      responses:
+        '200':
+          description: Requirements documentation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Requirements'
+
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        price:
+          type: number
+          format: float
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        price:
+          type: number
+          format: float
+        quantity:
+          type: integer
+    AddToCartRequest:
+      type: object
+      required:
+        - product_id
+      properties:
+        product_id:
+          type: integer
+        quantity:
+          type: integer
+          default: 1
+    CartResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        cart:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+    Order:
+      type: object
+      properties:
+        order_id:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        total:
+          type: number
+          format: float
+    OrderResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        order:
+          $ref: '#/components/schemas/Order'
+    SalesReport:
+      type: object
+      properties:
+        total_orders:
+          type: integer
+        total_revenue:
+          type: number
+          format: float
+        top_products:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              quantity:
+                type: integer
+    User:
+      type: object
+      properties:
+        username:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+    ToggleUserRequest:
+      type: object
+      required:
+        - username
+      properties:
+        username:
+          type: string
+    UserResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+    Requirements:
+      type: object
+      properties:
+        stakeholders:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              functional:
+                type: array
+                items:
+                  type: string
+              non_functional:
+                type: array
+                items:
+                  type: string
+        use_cases:
+          type: array
+          items:
+            type: string

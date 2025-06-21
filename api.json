@@ -1,0 +1,42 @@
+{
+  "stakeholders": [
+    {
+      "name": "Customer",
+      "functional": [
+        "Browse products by category",
+        "Add products to shopping cart",
+        "View shopping cart contents",
+        "Remove items from cart",
+        "Complete checkout process"
+      ],
+      "non_functional": [
+        "Product images load within 2 seconds",
+        "Checkout process completes within 10 seconds"
+      ]
+    },
+    {
+      "name": "Marketing Manager",
+      "functional": [
+        "View sales reports",
+        "Update featured products",
+        "Track product popularity",
+        "Manage promotional campaigns",
+        "Analyze customer demographics"
+      ],
+      "non_functional": [
+        "Sales report generation under 5 seconds",
+        "System available 99.9% of business hours"
+      ]
+    }
+  ],
+  "use_cases": [
+    "View product catalog",
+    "Add item to shopping cart",
+    "Remove item from shopping cart",
+    "Checkout and create order",
+    "Generate sales report",
+    "Update featured products",
+    "View system requirements",
+    "Toggle user status"
+  ]
+}
