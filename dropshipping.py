@@ -7,6 +7,8 @@ from PIL import Image, ImageTk
 import requests
 from io import BytesIO
 import threading
+import random
+import time
 
 # ===== BACKEND SERVICE =====
 class BackendService:
@@ -89,6 +91,12 @@ class BackendService:
                 }
             ]
         }
+        self.orders = []
+        self.users = [
+            {"username": "admin", "role": "admin", "status": "active"},
+            {"username": "manager", "role": "marketing", "status": "active"},
+            {"username": "customer1", "role": "customer", "status": "active"},
+        ]
     
     def get_products(self):
         """Get all products"""
@@ -96,11 +104,65 @@ class BackendService:
     
     def create_order(self, cart):
         """Create new order"""
-        return {
+        order = {
             "order_id": f"ORD-{str(uuid.uuid4())[:8].upper()}",
             "items": cart,
-            "status": "Processing"
+            "status": "Processing",
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "total": sum(item['price'] * item['quantity'] for item in cart)
         }
+        self.orders.append(order)
+        return order
+
+    def get_sales_report(self):
+        """Generate sales report"""
+        if not self.orders:
+            return "No orders yet"
+        
+        report = "===== SALES REPORT =====\n"
+        report += f"Total Orders: {len(self.orders)}\n"
+        report += f"Total Revenue: ${sum(order['total'] for order in self.orders):.2f}\n\n"
+        
+        # Top products
+        product_counts = {}
+        for order in self.orders:
+            for item in order['items']:
+                product_id = item['id']
+                product_counts[product_id] = product_counts.get(product_id, 0) + item['quantity']
+        
+        if product_counts:
+            sorted_products = sorted(product_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+            report += "Top Selling Products:\n"
+            for product_id, quantity in sorted_products:
+                # Find product name
+                for category in self.products.values():
+                    for product in category:
+                        if product['id'] == product_id:
+                            report += f" - {product['name']}: {quantity} sold\n"
+                            break
+        
+        return report
+
+    def get_system_health(self):
+        """Get mock system health data"""
+        return {
+            "cpu": random.randint(10, 80),
+            "memory": random.randint(30, 95),
+            "disk": random.randint(40, 90),
+            "status": "OK" if random.random() > 0.1 else "WARNING"
+        }
+
+    def get_users(self):
+        """Get user list"""
+        return self.users
+
+    def toggle_user_status(self, username):
+        """Toggle user active/inactive status"""
+        for user in self.users:
+            if user["username"] == username:
+                user["status"] = "inactive" if user["status"] == "active" else "active"
+                return True
+        return False
 
 # ===== FRONTEND APPLICATION =====
 THEME_COLOR = "#6a0dad"
@@ -111,7 +173,7 @@ class AnimeStyleApp:
     def __init__(self, root):
         self.root = root
         self.root.title("🌸 AnimeStyle Dropship")
-        self.root.geometry("900x650")
+        self.root.geometry("1000x700")
         self.root.configure(bg=BG_COLOR)
         self.cart = []
         self.backend = BackendService()
@@ -128,6 +190,8 @@ class AnimeStyleApp:
         self.create_home_tab()
         self.create_cart_tab()
         self.create_requirements_tab()
+        self.create_marketing_tab()
+        self.create_admin_tab()
 
     def load_images_async(self):
         """Load product images in background thread"""
@@ -203,16 +267,173 @@ class AnimeStyleApp:
         - Shopping cart
         - Checkout process
         
+        👨‍💼 Marketing Manager:
+        Functional:
+        1. Update featured products
+        2. Track product popularity
+        3. Manage promotional campaigns
+        4. Analyze customer demographics
+        5. Generate sales reports
+        
+        Non-Functional:
+        1. Report generation < 5 seconds
+        2. Campaign updates without downtime
+        
+        👨‍💻 System Administrator:
+        Functional:
+        1. Monitor system health
+        2. Manage user accounts
+        3. Configure system settings
+        4. Perform backups
+        5. View audit logs
+        
+        Non-Functional:
+        1. 99.9% uptime SLA
+        2. Real-time health monitoring
+        
         SYSTEM FEATURES:
         1. Product catalog
         2. Shopping cart
         3. Order management
         4. Responsive design
         5. RESTful backend
+        6. Sales reporting
+        7. System monitoring
         """
         
         tk.Label(frame, text=content, font=("Arial", 11), 
                 justify="left", padx=20, pady=20).pack(fill="both", expand=True)
+
+    def create_marketing_tab(self):
+        """Create marketing manager tab"""
+        self.marketing_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.marketing_frame, text="📊 Marketing")
+        
+        # Header
+        header = tk.Frame(self.marketing_frame, bg=THEME_COLOR)
+        header.pack(fill="x", pady=5)
+        tk.Label(header, text="Marketing Dashboard", font=("Arial", 16, "bold"), 
+                fg="white", bg=THEME_COLOR).pack(pady=5)
+        
+        # Content frame
+        content_frame = tk.Frame(self.marketing_frame, bg=BG_COLOR)
+        content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Sales report section
+        report_frame = tk.LabelFrame(content_frame, text="Sales Analytics", 
+                                    font=("Arial", 12, "bold"), bg=BG_COLOR)
+        report_frame.pack(fill="x", pady=10)
+        
+        tk.Button(report_frame, text="Generate Sales Report", bg=THEME_COLOR, fg="white",
+                 command=self.show_sales_report).pack(pady=10, padx=10, side="left")
+        
+        # Product management section
+        manage_frame = tk.LabelFrame(content_frame, text="Product Management", 
+                                    font=("Arial", 12, "bold"), bg=BG_COLOR)
+        manage_frame.pack(fill="x", pady=10)
+        
+        # Mock featured product selector
+        tk.Label(manage_frame, text="Featured Products:", bg=BG_COLOR).pack(anchor="w", padx=10, pady=5)
+        
+        self.featured_var = tk.StringVar(value="101")
+        products = self.backend.get_products()
+        for cat in products.values():
+            for product in cat:
+                tk.Radiobutton(manage_frame, text=product["name"], variable=self.featured_var,
+                              value=str(product["id"]), bg=BG_COLOR).pack(anchor="w", padx=20)
+        
+        tk.Button(manage_frame, text="Update Featured Products", bg=ACCENT_COLOR, fg="white",
+                 command=lambda: messagebox.showinfo("Success", "Featured products updated!")).pack(pady=10)
+
+    def create_admin_tab(self):
+        """Create system administrator tab"""
+        self.admin_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.admin_frame, text="⚙️ Admin")
+        
+        # Header
+        header = tk.Frame(self.admin_frame, bg=THEME_COLOR)
+        header.pack(fill="x", pady=5)
+        tk.Label(header, text="System Administration", font=("Arial", 16, "bold"), 
+                fg="white", bg=THEME_COLOR).pack(pady=5)
+        
+        # Content frame
+        content_frame = tk.Frame(self.admin_frame, bg=BG_COLOR)
+        content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # System health section
+        health_frame = tk.LabelFrame(content_frame, text="System Health", 
+                                   font=("Arial", 12, "bold"), bg=BG_COLOR)
+        health_frame.pack(fill="x", pady=10)
+        
+        self.health_labels = {
+            "cpu": tk.Label(health_frame, text="CPU: --%", bg=BG_COLOR),
+            "memory": tk.Label(health_frame, text="Memory: --%", bg=BG_COLOR),
+            "disk": tk.Label(health_frame, text="Disk: --%", bg=BG_COLOR),
+            "status": tk.Label(health_frame, text="Status: --", font=("Arial", 10, "bold"), bg=BG_COLOR)
+        }
+        
+        for label in self.health_labels.values():
+            label.pack(anchor="w", padx=10, pady=2)
+        
+        tk.Button(health_frame, text="Refresh Health", bg=THEME_COLOR, fg="white",
+                 command=self.update_system_health).pack(pady=10)
+        
+        # User management section
+        user_frame = tk.LabelFrame(content_frame, text="User Management", 
+                                 font=("Arial", 12, "bold"), bg=BG_COLOR)
+        user_frame.pack(fill="x", pady=10)
+        
+        # User list
+        tk.Label(user_frame, text="User Accounts:", bg=BG_COLOR).pack(anchor="w", padx=10, pady=5)
+        
+        self.user_list_frame = tk.Frame(user_frame, bg=BG_COLOR)
+        self.user_list_frame.pack(fill="x", padx=10, pady=5)
+        
+        self.update_user_list()
+        
+        # Backup button
+        tk.Button(user_frame, text="Perform System Backup", bg=ACCENT_COLOR, fg="white",
+                 command=lambda: messagebox.showinfo("Backup", "System backup completed successfully!")).pack(pady=10)
+
+    def update_user_list(self):
+        """Update the user list in admin panel"""
+        for widget in self.user_list_frame.winfo_children():
+            widget.destroy()
+        
+        users = self.backend.get_users()
+        for user in users:
+            user_frame = tk.Frame(self.user_list_frame, bg=BG_COLOR)
+            user_frame.pack(fill="x", pady=2)
+            
+            status_color = "green" if user["status"] == "active" else "red"
+            tk.Label(user_frame, text=f"{user['username']} ({user['role']})", 
+                    bg=BG_COLOR, width=20, anchor="w").pack(side="left", padx=5)
+            tk.Label(user_frame, text=user["status"], fg=status_color, 
+                    bg=BG_COLOR, width=10).pack(side="left", padx=5)
+            
+            tk.Button(user_frame, text="Toggle Status", 
+                     command=lambda u=user['username']: self.toggle_user_status(u)).pack(side="right", padx=5)
+
+    def toggle_user_status(self, username):
+        """Toggle user status"""
+        if self.backend.toggle_user_status(username):
+            self.update_user_list()
+            messagebox.showinfo("Success", f"User {username} status updated")
+        else:
+            messagebox.showerror("Error", "User not found")
+
+    def update_system_health(self):
+        """Update system health display"""
+        health = self.backend.get_system_health()
+        self.health_labels["cpu"].config(text=f"CPU: {health['cpu']}%")
+        self.health_labels["memory"].config(text=f"Memory: {health['memory']}%")
+        self.health_labels["disk"].config(text=f"Disk: {health['disk']}%")
+        
+        status_color = "green" if health["status"] == "OK" else "orange"
+        self.health_labels["status"].config(
+            text=f"Status: {health['status']}", 
+            fg=status_color
+        )
 
     def show_products(self):
         """Display products based on selected category"""
@@ -330,8 +551,15 @@ class AnimeStyleApp:
         self.update_cart_tab()
         self.show_cart()
 
+    def show_sales_report(self):
+        """Show sales report"""
+        report = self.backend.get_sales_report()
+        messagebox.showinfo("Sales Report", report)
+
 # ===== RUN APPLICATION =====
 if __name__ == "__main__":
     root = tk.Tk()
     app = AnimeStyleApp(root)
     root.mainloop()
+
+    
