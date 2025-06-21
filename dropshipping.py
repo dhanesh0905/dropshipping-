@@ -1,9 +1,10 @@
 import tkinter as tk
 import ttkbootstrap as ttk
 import uuid, random, time, requests, webbrowser, json, os
-from PIL import Image
+from PIL import Image, ImageTk  # Added ImageTk
 from io import BytesIO
 import threading
+from ttkbootstrap.scrolled import ScrolledFrame
 
 # ===== BACKEND SERVICE =====
 class BackendService:
@@ -21,7 +22,7 @@ class BackendService:
         try:
             # Create products.json if it doesn't exist
             if not os.path.exists("products.json"):
-                self.create_sample_products()
+                return self.create_sample_products()
                 
             with open("products.json", "r") as f:
                 return json.load(f)
@@ -185,10 +186,18 @@ class AnimeStyleApp:
             ttk.Radiobutton(cat_frame, text=text, variable=self.cat_var, 
                            value=val, command=self.show_products).pack(side="left", padx=5)
         
-        self.product_container = ttk.Frame(home)
+        # Use ScrolledFrame for product display
+        self.product_container = ScrolledFrame(home, autohide=True)
         self.product_container.pack(fill="both", expand=True)
-        ttk.Label(self.product_container, text="Loading products...", 
-                 font=("Arial", 14)).pack(pady=50)
+        
+        # Create inner frame for products
+        self.product_inner_frame = ttk.Frame(self.product_container)
+        self.product_inner_frame.pack(fill="both", expand=True)
+        
+        # Loading placeholder
+        self.loading_label = ttk.Label(self.product_inner_frame, text="Loading products...", 
+                                      font=("Arial", 14))
+        self.loading_label.pack(pady=50)
 
         # Cart tab
         self.cart_frame = ttk.Frame(self.notebook)
@@ -296,16 +305,30 @@ Non-Functional:
                   ).pack(pady=10)
 
     def load_images(self):
+        """Load product images in background thread"""
         for cat in self.backend.get_products().values():
             for p in cat:
                 try:
-                    img = Image.open(BytesIO(requests.get(p["image"]).content))
+                    response = requests.get(p["image"], timeout=10)
+                    img = Image.open(BytesIO(response.content))
                     img = img.resize((150, 150), Image.LANCZOS)
-                    self.product_images[p["id"]] = tk.PhotoImage(img)
-                except:
+                    
+                    # Create PhotoImage in main thread to avoid issues
+                    self.root.after(0, self.create_photo, p["id"], img)
+                except Exception as e:
+                    print(f"Error loading image: {e}")
+                    # Create placeholder in main thread
                     placeholder = Image.new('RGB', (150, 150), '#e0e0e0')
-                    self.product_images[p["id"]] = tk.PhotoImage(placeholder)
-        self.show_products()
+                    self.root.after(0, self.create_photo, p["id"], placeholder)
+        
+        # Update UI after all images are loaded
+        self.root.after(0, self.show_products)
+
+    def create_photo(self, pid, img):
+        """Convert PIL Image to PhotoImage in main thread"""
+        # Convert PIL Image to PhotoImage
+        photo = ImageTk.PhotoImage(img)
+        self.product_images[pid] = photo
 
     def update_user_list(self):
         for w in self.user_list_frame.winfo_children(): w.destroy()
@@ -334,32 +357,52 @@ Non-Functional:
         )
 
     def show_products(self):
-        for w in self.product_container.winfo_children(): w.destroy()
+        """Display products with loaded images"""
+        # Remove loading label if exists
+        if self.loading_label.winfo_exists():
+            self.loading_label.destroy()
+        
+        # Clear existing products
+        for w in self.product_inner_frame.winfo_children():
+            w.destroy()
+        
         products = self.backend.get_products()
         cat = self.cat_var.get()
         plist = products["men"] + products["women"] if cat == "all" else products[cat]
         
+        # Create grid layout
         for i, p in enumerate(plist):
-            row, col = divmod(i, 2)
-            frame = ttk.Frame(self.product_container, padding=10, relief="groove")
+            row, col = divmod(i, 3)  # 3 columns per row
+            frame = ttk.Frame(self.product_inner_frame, padding=10, 
+                             relief="groove", borderwidth=1)
             frame.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
+            frame.columnconfigure(0, weight=1)
             
-            img = self.product_images.get(p["id"])
-            (ttk.Label(frame, image=img).pack() if img else 
-             ttk.Label(frame, text="Image Loading...", width=20, height=8).pack())
+            # Product image
+            photo = self.product_images.get(p["id"])
+            if photo:
+                img_label = ttk.Label(frame, image=photo)
+                img_label.image = photo  # Keep reference
+                img_label.pack(pady=5)
+            else:
+                ttk.Label(frame, text="Image Loading...", width=20, height=8).pack()
             
-            ttk.Label(frame, text=p["name"], font=("Arial", 11, "bold")).pack()
+            # Product details
+            ttk.Label(frame, text=p["name"], font=("Arial", 11, "bold"), 
+                     wraplength=150).pack(pady=5)
             ttk.Label(frame, text=f"${p['price']:.2f}", bootstyle="danger").pack()
             
+            # Action buttons
             btn_frame = ttk.Frame(frame)
             btn_frame.pack(fill="x", pady=5)
             ttk.Button(btn_frame, text="Add to Cart", bootstyle="primary",
-                      command=lambda p=p: self.add_to_cart(p)).pack(side="left")
+                      command=lambda p=p: self.add_to_cart(p)).pack(side="left", padx=2)
             ttk.Button(btn_frame, text="Details", bootstyle="secondary",
-                      command=lambda url=p["source"]: webbrowser.open(url)).pack(side="left", padx=5)
+                      command=lambda url=p["source"]: webbrowser.open(url)).pack(side="left", padx=2)
         
-        self.product_container.columnconfigure(0, weight=1)
-        self.product_container.columnconfigure(1, weight=1)
+        # Configure grid columns
+        for i in range(3):  # 3 columns
+            self.product_inner_frame.columnconfigure(i, weight=1, uniform="col")
 
     def add_to_cart(self, product):
         for item in self.cart:
@@ -392,9 +435,14 @@ Non-Functional:
             return
         
         ttk.Label(self.cart_content, text="🛒 Your Cart", font=("Arial", 18, "bold")).pack(pady=10)
+        
+        # Create scrollable cart area
+        cart_scroll = ScrolledFrame(self.cart_content, autohide=True)
+        cart_scroll.pack(fill="both", expand=True, padx=20, pady=5)
+        
         for item in self.cart:
-            frame = ttk.Frame(self.cart_content, padding=10, relief="groove")
-            frame.pack(fill="x", padx=20, pady=5)
+            frame = ttk.Frame(cart_scroll, padding=10, relief="groove")
+            frame.pack(fill="x", pady=5)
             
             ttk.Label(frame, text=item["name"], font=("Arial", 12, "bold")).pack(fill="x", anchor="w")
             ttk.Label(frame, text=f"${item['price']:.2f} × {item['quantity']}").pack(fill="x", anchor="w")
@@ -402,12 +450,24 @@ Non-Functional:
             ttk.Button(frame, text="Remove", bootstyle="danger", 
                       command=lambda id=item["id"]: self.remove_from_cart(id)).pack(anchor="e")
         
+        # Order summary
+        summary_frame = ttk.Frame(self.cart_content)
+        summary_frame.pack(fill="x", padx=20, pady=10)
+        total = sum(item['price'] * item['quantity'] for item in self.cart)
+        ttk.Label(summary_frame, text=f"Order Total: ${total:.2f}", 
+                 font=("Arial", 14, "bold")).pack(side="right")
+        
         ttk.Button(self.cart_content, text="Checkout", font=("Arial", 14), 
                   bootstyle="primary", command=self.process_checkout).pack(pady=20)
 
     def process_checkout(self):
         order = self.backend.create_order(self.cart)
-        ttk.dialogs.Messagebox.show_info(f"Thank you!\nOrder ID: {order['order_id']}", "Order Placed")
+        ttk.dialogs.Messagebox.show_info(
+            f"Thank you for your order!\n"
+            f"Order ID: {order['order_id']}\n"
+            f"Total: ${order['total']:.2f}", 
+            "Order Placed"
+        )
         self.cart = []
         self.update_cart()
 
