@@ -1,10 +1,12 @@
+import datetime
 from flask import Flask, jsonify, request, session
 import uuid
 import random
 import datetime
-
+from waitress import serve
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'
+app.secret_key = 'ksss'
+
 
 # ===== BACKEND SERVICE =====
 class BackendService:
@@ -201,4 +203,5 @@ def get_requirements():
 
 # Run the application
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=5000)
