@@ -3,7 +3,6 @@ from flask import Flask, jsonify, request, session
 import uuid
 import random
 import datetime
-from waitress import serve
 app = Flask(__name__)
 app.secret_key = 'ksss'
 
@@ -116,6 +115,8 @@ def get_products():
         return jsonify(backend.products[category])
     return jsonify(backend.products)
 
+
+
 @app.route('/api/cart', methods=['GET', 'POST'])
 def manage_cart():
     if request.method == 'GET':
@@ -149,6 +150,10 @@ def manage_cart():
     cart.append({**product, "quantity": quantity})
     session['cart'] = cart
     return jsonify({"message": "Item added to cart", "cart": cart}), 201
+
+@app.route('/')
+def index():
+    return "Welcome to the Dropshipping API!"
 
 @app.route('/api/cart/<int:product_id>', methods=['DELETE'])
 def remove_item(product_id):
@@ -203,5 +208,4 @@ def get_requirements():
 
 # Run the application
 if __name__ == '__main__':
-    from waitress import serve
-    serve(app, host="0.0.0.0", port=5000)
+    app.run(debug=True)
