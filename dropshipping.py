@@ -1,27 +1,21 @@
-
 import datetime
 from flask import Flask, jsonify, request, session, render_template_string, redirect, url_for
 import uuid
+import json
 
 app = Flask(__name__)
 app.secret_key = 'secure_key_123'
 
-# Backend Service with more features
+# Load products from JSON file
+with open('products.json', 'r') as f:
+    products_data = json.load(f)
+
+# Backend Service with real product data
 class BackendService:
     def __init__(self):
         self.orders = []
-        self.products = {
-            "men": [
-                {"id": 101, "name": "Naruto Hoodie", "price": 49.99, "image": "hoodie.jpg"},
-                {"id": 102, "name": "One Piece T-Shirt", "price": 29.99, "image": "tshirt.jpg"},
-                {"id": 103, "name": "DBZ Jacket", "price": 59.99, "image": "jacket.jpg"}
-            ],
-            "women": [
-                {"id": 201, "name": "Sailor Moon Brooch", "price": 89.99, "image": "brooch.jpg"},
-                {"id": 202, "name": "MHA Jacket", "price": 54.99, "image": "mha_jacket.jpg"}
-            ]
-        }
-        self.featured = [101, 201]
+        self.products = products_data
+        self.featured = [101, 201, 103, 202]  # Featured product IDs
         self.users = [
             {"username": "admin", "password": "admin123", "role": "admin", "status": "active"},
             {"username": "user", "password": "user123", "role": "customer", "status": "active"}
@@ -81,7 +75,7 @@ def base_template(title, content):
             .product-img {{ height: 200px; object-fit: cover; }}
             .banner {{ 
                 background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
-                url('https://via.placeholder.com/1200x400');
+                url('https://images.unsplash.com/photo-1633327941349-7dbf2c7a5af0?q=80&w=2070&auto=format&fit=crop');
                 background-size: cover;
                 color: white;
                 padding: 100px 20px;
@@ -144,11 +138,13 @@ def base_template(title, content):
 def home():
     featured = [p for cat in backend.products.values() for p in cat if p['id'] in backend.featured]
     products_html = ''.join(
-        f"""<div class="col-md-4">
-            <div class="card">
-                <img src="https://via.placeholder.com/300x200?text={p['name']}" class="card-img-top product-img">
+        f"""<div class="col-md-3">
+            <div class="card h-100">
+                <img src="{p['image']}" class="card-img-top product-img">
                 <div class="card-body">
-                    <h5 class="card-title">{p['name']}</h5>
+                    <h5 class="card-title">
+                        <a href="{p['source']}" target="_blank">{p['name']}</a>
+                    </h5>
                     <p class="card-text">${p['price']}</p>
                     <a href="/add-to-cart/{p['id']}" class="btn btn-primary">Add to Cart</a>
                 </div>
@@ -159,18 +155,18 @@ def home():
     
     content = f"""
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-12">
             <h2>Featured Products</h2>
             <div class="row">
                 {products_html}
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-12 mt-4">
             <div class="card">
                 <div class="card-body">
                     <h3>Categories</h3>
-                    <div class="list-group">
-                        {"".join(f'<a href="/products?category={cat}" class="list-group-item list-group-item-action">{cat.capitalize()}</a>' 
+                    <div class="d-flex gap-2">
+                        {"".join(f'<a href="/products?category={cat}" class="btn btn-outline-primary">{cat.capitalize()} Collection</a>' 
                          for cat in backend.products.keys())}
                     </div>
                 </div>
@@ -187,14 +183,16 @@ def products():
     
     for cat, items in backend.products.items():
         if category == 'all' or category == cat:
-            products_html += f'<h3>{cat.capitalize()}</h3><div class="row">'
+            products_html += f'<h3 class="mt-4">{cat.capitalize()}</h3><div class="row">'
             for product in items:
                 products_html += f"""
-                <div class="col-md-4">
-                    <div class="card">
-                        <img src="https://via.placeholder.com/300x200?text={product['name']}" class="card-img-top product-img">
+                <div class="col-md-3 mb-4">
+                    <div class="card h-100">
+                        <img src="{product['image']}" class="card-img-top product-img">
                         <div class="card-body">
-                            <h5 class="card-title">{product['name']}</h5>
+                            <h5 class="card-title">
+                                <a href="{product['source']}" target="_blank">{product['name']}</a>
+                            </h5>
                             <p class="card-text">${product['price']}</p>
                             <a href="/add-to-cart/{product['id']}" class="btn btn-primary">Add to Cart</a>
                         </div>
@@ -204,7 +202,7 @@ def products():
             products_html += '</div>'
     
     content = f"""
-    <h1>Products</h1>
+    <h1>All Products</h1>
     <div class="mb-4">
         <a href="/products?category=all" class="btn {'btn-primary' if category == 'all' else 'btn-outline-primary'} me-2">All</a>
         {"".join(f'<a href="/products?category={cat}" class="btn {'btn-primary' if category == cat else 'btn-outline-primary'} me-2">{cat.capitalize()}</a>' 
@@ -234,7 +232,11 @@ def cart():
     
     items_html = ''.join(
         f"""<tr>
-            <td>{item['name']}</td>
+            <td>
+                <a href="{item['source']}" target="_blank">
+                    {item['name']}
+                </a>
+            </td>
             <td>${item['price']}</td>
             <td>{item['quantity']}</td>
             <td>${item['price'] * item['quantity']:.2f}</td>
@@ -282,7 +284,12 @@ def checkout():
     session['cart'] = []
     
     items_html = ''.join(
-        f"<li>{item['name']} x {item['quantity']} - ${item['price'] * item['quantity']:.2f}</li>" 
+        f"""<li>
+            <a href="{item['source']}" target="_blank">
+                {item['name']}
+            </a> 
+            x {item['quantity']} - ${item['price'] * item['quantity']:.2f}
+        </li>""" 
         for item in order['items']
     )
     
@@ -322,7 +329,10 @@ def orders():
             </div>
             <div class="card-body">
                 <ul>
-                    {"".join(f"<li>{item['name']} x {item['quantity']}</li>" for item in order['items'])}
+                    {"".join(
+                        f"<li><a href='{item['source']}' target='_blank'>{item['name']}</a> x {item['quantity']}</li>" 
+                        for item in order['items']
+                    )}
                 </ul>
                 <p class="h5">Total: ${order['total']:.2f}</p>
             </div>
@@ -352,7 +362,10 @@ def admin():
         <p><strong>Total Revenue:</strong> ${report['total_revenue']:.2f}</p>
         <h5>Top Products:</h5>
         <ul>
-            {"".join(f"<li>Product {pid}: {qty} sold</li>" for pid, qty in report['top_products'])}
+            {"".join(
+                f"<li>{next((p['name'] for cat in backend.products.values() for p in cat if p['id'] == pid), 'Product')}: {qty} sold</li>" 
+                for pid, qty in report['top_products']
+            )}
         </ul>
         """
     
